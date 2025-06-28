@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import os
+import re
 from werkzeug.utils import secure_filename
 from flask import current_app
 from models import User, Subject, Assignment, ImportedData, ImportedDataRow
@@ -186,13 +187,36 @@ def import_subject_row(row, mapping):
         if existing_subject:
             return False
         
+        # Helper function to safely convert to integer
+        def safe_int_convert(value, default=0):
+            if pd.isna(value) or value == '' or value is None:
+                return default
+            try:
+                # Convert to string first, then try to extract numeric part
+                str_val = str(value).strip()
+                if str_val == '' or str_val.lower() == 'nan':
+                    return default
+                # Try direct conversion first
+                return int(float(str_val))
+            except (ValueError, TypeError):
+                # If it's a roman numeral or contains non-numeric characters, try to extract numbers
+                import re
+                numbers = re.findall(r'\d+', str_val)
+                if numbers:
+                    return int(numbers[0])
+                # Convert roman numerals to integers
+                roman_map = {'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 8}
+                if str_val.upper() in roman_map:
+                    return roman_map[str_val.upper()]
+                return default
+        
         subject = Subject(
             name=name,
             code=code,
-            lecture_hours=int(row.get(mapping.get('lecture_hours', ''), 0) or 0),
-            tutorial_hours=int(row.get(mapping.get('tutorial_hours', ''), 0) or 0),
-            practical_hours=int(row.get(mapping.get('practical_hours', ''), 0) or 0),
-            semester=int(row.get(mapping.get('semester', ''), 1) or 1),
+            lecture_hours=safe_int_convert(row.get(mapping.get('lecture_hours', ''), 0), 0),
+            tutorial_hours=safe_int_convert(row.get(mapping.get('tutorial_hours', ''), 0), 0),
+            practical_hours=safe_int_convert(row.get(mapping.get('practical_hours', ''), 0), 0),
+            semester=safe_int_convert(row.get(mapping.get('semester', ''), 1), 1),
             department=str(row.get(mapping.get('department', ''), '')).strip(),
             subject_type=str(row.get(mapping.get('subject_type', ''), 'Regular')).strip()
         )
