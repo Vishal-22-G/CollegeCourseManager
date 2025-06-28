@@ -47,8 +47,8 @@ class User(UserMixin, db.Model):
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    code = db.Column(db.String(20), unique=True, nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    code = db.Column(db.String(50), unique=True, nullable=False)
     lecture_hours = db.Column(db.Integer, default=0)
     tutorial_hours = db.Column(db.Integer, default=0)
     practical_hours = db.Column(db.Integer, default=0)

@@ -114,22 +114,35 @@ def process_imported_data(df, mapping, data_type, filename):
                 error_msg = 'Processing failed'
                 
         except Exception as e:
+            # Rollback the session on error
+            db.session.rollback()
             failed_rows += 1
             status = 'failed'
             error_msg = str(e)
         
-        # Save row data
-        row_record = ImportedDataRow(
-            import_id=import_session.id,
-            row_data=json.dumps(row.to_dict()),
-            status=status,
-            error_message=error_msg
-        )
-        db.session.add(row_record)
+        # Save row data in a separate transaction
+        try:
+            row_record = ImportedDataRow(
+                import_id=import_session.id,
+                row_data=json.dumps(row.to_dict()),
+                status=status,
+                error_message=error_msg
+            )
+            db.session.add(row_record)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Failed to save row record: {e}")
     
-    import_session.successful_rows = successful_rows
-    import_session.failed_rows = failed_rows
-    db.session.commit()
+    # Update import session in final transaction
+    try:
+        import_session = db.session.merge(import_session)
+        import_session.successful_rows = successful_rows
+        import_session.failed_rows = failed_rows
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Failed to update import session: {e}")
     
     return import_session
 
@@ -137,14 +150,14 @@ def import_faculty_row(row, mapping):
     """Import a single faculty row"""
     try:
         # Generate username from name if not provided
-        first_name = str(row.get(mapping.get('first_name', ''), '')).strip()
-        last_name = str(row.get(mapping.get('last_name', ''), '')).strip()
+        first_name = str(row.get(mapping.get('first_name', ''), '')).strip()[:64]
+        last_name = str(row.get(mapping.get('last_name', ''), '')).strip()[:64]
         
         if not first_name or not last_name:
             return False
         
-        username = f"{first_name.lower()}.{last_name.lower()}".replace(' ', '.')
-        email = str(row.get(mapping.get('email', ''), f"{username}@college.edu")).strip()
+        username = f"{first_name.lower()}.{last_name.lower()}".replace(' ', '.')[:64]
+        email = str(row.get(mapping.get('email', ''), f"{username}@college.edu")).strip()[:120]
         
         # Check if user already exists
         existing_user = User.query.filter_by(email=email).first()
@@ -153,6 +166,10 @@ def import_faculty_row(row, mapping):
         
         from werkzeug.security import generate_password_hash
         
+        designation = str(row.get(mapping.get('designation', ''), 'Assistant Prof')).strip()[:50]
+        department = str(row.get(mapping.get('department', ''), '')).strip()[:100]
+        employee_id = str(row.get(mapping.get('employee_id', ''), '')).strip()[:20]
+        
         user = User(
             username=username,
             email=email,
@@ -160,16 +177,18 @@ def import_faculty_row(row, mapping):
             first_name=first_name,
             last_name=last_name,
             role='faculty',
-            designation=str(row.get(mapping.get('designation', ''), 'Assistant Prof')).strip(),
-            department=str(row.get(mapping.get('department', ''), '')).strip(),
-            employee_id=str(row.get(mapping.get('employee_id', ''), '')).strip()
+            designation=designation,
+            department=department,
+            employee_id=employee_id
         )
         
         db.session.add(user)
+        db.session.flush()  # Flush to catch any constraint violations early
         return True
         
     except Exception as e:
         current_app.logger.error(f"Error importing faculty row: {str(e)}")
+        db.session.rollback()
         return False
 
 def import_subject_row(row, mapping):
@@ -181,27 +200,46 @@ def import_subject_row(row, mapping):
         if not name or not code:
             return False
         
+        # Truncate long names to fit database constraints
+        name = name[:255] if len(name) > 255 else name
+        code = code[:50] if len(code) > 50 else code
+        
         # Check if subject already exists
         existing_subject = Subject.query.filter_by(code=code).first()
         if existing_subject:
             return False
         
+        # Validate and convert numeric fields
+        try:
+            lecture_hours = int(float(row.get(mapping.get('lecture_hours', ''), 0) or 0))
+            tutorial_hours = int(float(row.get(mapping.get('tutorial_hours', ''), 0) or 0))
+            practical_hours = int(float(row.get(mapping.get('practical_hours', ''), 0) or 0))
+            semester = int(float(row.get(mapping.get('semester', ''), 1) or 1))
+        except (ValueError, TypeError):
+            lecture_hours = tutorial_hours = practical_hours = 0
+            semester = 1
+        
+        department = str(row.get(mapping.get('department', ''), '')).strip()[:100]
+        subject_type = str(row.get(mapping.get('subject_type', ''), 'Regular')).strip()[:20]
+        
         subject = Subject(
             name=name,
             code=code,
-            lecture_hours=int(row.get(mapping.get('lecture_hours', ''), 0) or 0),
-            tutorial_hours=int(row.get(mapping.get('tutorial_hours', ''), 0) or 0),
-            practical_hours=int(row.get(mapping.get('practical_hours', ''), 0) or 0),
-            semester=int(row.get(mapping.get('semester', ''), 1) or 1),
-            department=str(row.get(mapping.get('department', ''), '')).strip(),
-            subject_type=str(row.get(mapping.get('subject_type', ''), 'Regular')).strip()
+            lecture_hours=lecture_hours,
+            tutorial_hours=tutorial_hours,
+            practical_hours=practical_hours,
+            semester=semester,
+            department=department,
+            subject_type=subject_type
         )
         
         db.session.add(subject)
+        db.session.flush()  # Flush to catch any constraint violations early
         return True
         
     except Exception as e:
         current_app.logger.error(f"Error importing subject row: {str(e)}")
+        db.session.rollback()
         return False
 
 def import_assignment_row(row, mapping):
@@ -233,20 +271,32 @@ def import_assignment_row(row, mapping):
         if existing_assignment:
             return False
         
+        # Validate and convert numeric fields
+        try:
+            lecture_hours = int(float(row.get(mapping.get('lecture_hours', ''), 0) or 0))
+            tutorial_hours = int(float(row.get(mapping.get('tutorial_hours', ''), 0) or 0))
+            practical_hours = int(float(row.get(mapping.get('practical_hours', ''), 0) or 0))
+        except (ValueError, TypeError):
+            lecture_hours = tutorial_hours = practical_hours = 0
+        
+        division = str(row.get(mapping.get('division', ''), '')).strip()[:10]
+        
         assignment = Assignment(
             faculty_id=faculty.id,
             subject_id=subject.id,
-            lecture_hours=int(row.get(mapping.get('lecture_hours', ''), 0) or 0),
-            tutorial_hours=int(row.get(mapping.get('tutorial_hours', ''), 0) or 0),
-            practical_hours=int(row.get(mapping.get('practical_hours', ''), 0) or 0),
-            division=str(row.get(mapping.get('division', ''), '')).strip()
+            lecture_hours=lecture_hours,
+            tutorial_hours=tutorial_hours,
+            practical_hours=practical_hours,
+            division=division
         )
         
         db.session.add(assignment)
+        db.session.flush()  # Flush to catch any constraint violations early
         return True
         
     except Exception as e:
         current_app.logger.error(f"Error importing assignment row: {str(e)}")
+        db.session.rollback()
         return False
 
 def get_dashboard_stats():
