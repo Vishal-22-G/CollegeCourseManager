@@ -81,68 +81,74 @@ def get_column_suggestions(df, data_type):
 
 def process_imported_data(df, mapping, data_type, filename):
     """Process imported data and save to database"""
+    # Create import session
     import_session = ImportedData(
         filename=filename,
         data_type=data_type,
         total_rows=len(df),
+        successful_rows=0,
+        failed_rows=0,
         mapping_config=json.dumps(mapping)
     )
-    db.session.add(import_session)
-    db.session.flush()  # Get the ID
     
-    successful_rows = 0
-    failed_rows = 0
-    
-    for index, row in df.iterrows():
-        try:
-            if data_type == 'faculty':
-                success = import_faculty_row(row, mapping)
-            elif data_type == 'subjects':
-                success = import_subject_row(row, mapping)
-            elif data_type == 'assignments':
-                success = import_assignment_row(row, mapping)
-            else:
-                success = False
-            
-            if success:
-                successful_rows += 1
-                status = 'success'
-                error_msg = None
-            else:
-                failed_rows += 1
-                status = 'failed'
-                error_msg = 'Processing failed'
-                
-        except Exception as e:
-            # Rollback the session on error
-            db.session.rollback()
-            failed_rows += 1
-            status = 'failed'
-            error_msg = str(e)
-        
-        # Save row data in a separate transaction
-        try:
-            row_record = ImportedDataRow(
-                import_id=import_session.id,
-                row_data=json.dumps(row.to_dict()),
-                status=status,
-                error_message=error_msg
-            )
-            db.session.add(row_record)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Failed to save row record: {e}")
-    
-    # Update import session in final transaction
     try:
-        import_session = db.session.merge(import_session)
+        db.session.add(import_session)
+        db.session.commit()
+        
+        successful_rows = 0
+        failed_rows = 0
+        
+        for index, row in df.iterrows():
+            status = 'failed'
+            error_msg = 'Processing failed'
+            
+            try:
+                if data_type == 'faculty':
+                    success = import_faculty_row(row, mapping)
+                elif data_type == 'subjects':
+                    success = import_subject_row(row, mapping)
+                elif data_type == 'assignments':
+                    success = import_assignment_row(row, mapping)
+                else:
+                    success = False
+                
+                if success:
+                    successful_rows += 1
+                    status = 'success'
+                    error_msg = None
+                    db.session.commit()  # Commit successful import
+                else:
+                    failed_rows += 1
+                    db.session.rollback()  # Rollback failed import
+                    
+            except Exception as e:
+                failed_rows += 1
+                error_msg = str(e)
+                db.session.rollback()
+            
+            # Save row data record
+            try:
+                row_record = ImportedDataRow(
+                    import_id=import_session.id,
+                    row_data=json.dumps(row.to_dict()),
+                    status=status,
+                    error_message=error_msg
+                )
+                db.session.add(row_record)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"Failed to save row record: {e}")
+        
+        # Update import session with final counts
         import_session.successful_rows = successful_rows
         import_session.failed_rows = failed_rows
         db.session.commit()
+        
     except Exception as e:
         db.session.rollback()
-        print(f"Failed to update import session: {e}")
+        print(f"Failed to create import session: {e}")
+        raise e
     
     return import_session
 

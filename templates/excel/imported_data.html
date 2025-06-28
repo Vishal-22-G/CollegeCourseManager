@@ -65,14 +65,14 @@
                                 <span class="text-success fw-bold">{{ import_session.successful_rows }}</span>
                             </td>
                             <td>
-                                {% if import_session.failed_rows > 0 %}
+                                {% if import_session.failed_rows and import_session.failed_rows > 0 %}
                                 <span class="text-danger fw-bold">{{ import_session.failed_rows }}</span>
                                 {% else %}
-                                <span class="text-muted">0</span>
+                                <span class="text-muted">{{ import_session.failed_rows or 0 }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% set success_rate = (import_session.successful_rows / import_session.total_rows * 100) if import_session.total_rows > 0 else 0 %}
+                                {% set success_rate = ((import_session.successful_rows or 0) / (import_session.total_rows or 1) * 100) if (import_session.total_rows or 0) > 0 else 0 %}
                                 <div class="success-rate">
                                     <span class="fw-bold {% if success_rate == 100 %}text-success{% elif success_rate >= 75 %}text-warning{% else %}text-danger{% endif %}">
                                         {{ success_rate|round(1) }}%

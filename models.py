@@ -103,9 +103,9 @@ class ImportedData(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     import_date = db.Column(db.DateTime, default=datetime.utcnow)
     data_type = db.Column(db.String(50))  # faculty, subjects, assignments, etc.
-    total_rows = db.Column(db.Integer)
-    successful_rows = db.Column(db.Integer)
-    failed_rows = db.Column(db.Integer)
+    total_rows = db.Column(db.Integer, default=0)
+    successful_rows = db.Column(db.Integer, default=0)
+    failed_rows = db.Column(db.Integer, default=0)
     mapping_config = db.Column(db.Text)  # JSON string of column mappings
     
 class ImportedDataRow(db.Model):
