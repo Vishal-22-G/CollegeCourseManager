@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - College CMS{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">Dashboard</h1>
+                <p class="text-muted mb-0">Welcome back, {{ current_user.full_name }}!</p>
+            </div>
+            <div class="page-actions">
+                <span class="badge bg-primary">{{ current_user.role.title() }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="stats-number">{{ stats.total_faculty }}</div>
+                            <div class="stats-label">Total Faculty</div>
+                        </div>
+                        <div class="stats-icon bg-primary">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="stats-number">{{ stats.total_subjects }}</div>
+                            <div class="stats-label">Total Subjects</div>
+                        </div>
+                        <div class="stats-icon bg-success">
+                            <i class="fas fa-book"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="stats-number">{{ stats.total_assignments }}</div>
+                            <div class="stats-label">Total Assignments</div>
+                        </div>
+                        <div class="stats-icon bg-warning">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="stats-number">{{ stats.total_students }}</div>
+                            <div class="stats-label">Total Students</div>
+                        </div>
+                        <div class="stats-icon bg-info">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Faculty Workload Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Faculty Workload Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="workloadChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clock me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="quick-actions">
+                        {% if current_user.role == 'admin' %}
+                        <a href="{{ url_for('faculty.add') }}" class="quick-action-item">
+                            <div class="action-icon bg-primary">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="action-content">
+                                <div class="action-title">Add Faculty</div>
+                                <div class="action-desc">Register new faculty member</div>
+                            </div>
+                        </a>
+                        {% endif %}
+
+                        <a href="{{ url_for('subjects.add') }}" class="quick-action-item">
+                            <div class="action-icon bg-success">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <div class="action-content">
+                                <div class="action-title">Add Subject</div>
+                                <div class="action-desc">Create new subject</div>
+                            </div>
+                        </a>
+
+                        {% if current_user.role in ['admin', 'faculty'] %}
+                        <a href="{{ url_for('assignments.assign') }}" class="quick-action-item">
+                            <div class="action-icon bg-warning">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <div class="action-content">
+                                <div class="action-title">Assign Task</div>
+                                <div class="action-desc">Assign subject to faculty</div>
+                            </div>
+                        </a>
+
+                        <a href="{{ url_for('timetable.create') }}" class="quick-action-item">
+                            <div class="action-icon bg-info">
+                                <i class="fas fa-calendar-plus"></i>
+                            </div>
+                            <div class="action-content">
+                                <div class="action-title">Add Schedule</div>
+                                <div class="action-desc">Create timetable entry</div>
+                            </div>
+                        </a>
+                        {% endif %}
+
+                        {% if current_user.role == 'admin' %}
+                        <a href="{{ url_for('excel.import_data') }}" class="quick-action-item">
+                            <div class="action-icon bg-secondary">
+                                <i class="fas fa-file-excel"></i>
+                            </div>
+                            <div class="action-content">
+                                <div class="action-title">Import Data</div>
+                                <div class="action-desc">Upload Excel files</div>
+                            </div>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if stats.department_stats %}
+    <!-- Department Distribution -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Faculty by Department
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="departmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Faculty Workload Details -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users me-2"></i>Faculty Workload Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="workload-list">
+                        {% for faculty in stats.faculty_workloads[:5] %}
+                        <div class="workload-item">
+                            <div class="workload-info">
+                                <div class="faculty-name">{{ faculty.name }}</div>
+                                <div class="workload-hours">{{ faculty.workload }}/{{ faculty.limit }} hours</div>
+                            </div>
+                            <div class="workload-progress">
+                                <div class="progress">
+                                    <div class="progress-bar {% if faculty.percentage > 90 %}bg-danger{% elif faculty.percentage > 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         style="width: {{ faculty.percentage }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ faculty.percentage|round(1) }}%</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Faculty Workload Chart
+const workloadCtx = document.getElementById('workloadChart').getContext('2d');
+const workloadChart = new Chart(workloadCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for faculty in stats.faculty_workloads %}'{{ faculty.name }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Current Workload',
+            data: [{% for faculty in stats.faculty_workloads %}{{ faculty.workload }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(13, 110, 253, 0.8)',
+            borderColor: 'rgba(13, 110, 253, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Workload Limit',
+            data: [{% for faculty in stats.faculty_workloads %}{{ faculty.limit }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(220, 53, 69, 0.3)',
+            borderColor: 'rgba(220, 53, 69, 1)',
+            borderWidth: 1,
+            type: 'line'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Hours'
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        }
+    }
+});
+
+{% if stats.department_stats %}
+// Department Distribution Chart
+const departmentCtx = document.getElementById('departmentChart').getContext('2d');
+const departmentChart = new Chart(departmentCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for dept in stats.department_stats %}'{{ dept.department }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for dept in stats.department_stats %}{{ dept.count }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                'rgba(13, 110, 253, 0.8)',
+                'rgba(25, 135, 84, 0.8)',
+                'rgba(255, 193, 7, 0.8)',
+                'rgba(220, 53, 69, 0.8)',
+                'rgba(13, 202, 240, 0.8)',
+                'rgba(111, 66, 193, 0.8)'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

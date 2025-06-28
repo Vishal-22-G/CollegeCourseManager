@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Column Mapping - College CMS{% endblock %}
+
+{% block content %}
+<div class="excel-mapping-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('excel.import_data') }}" class="btn btn-outline-secondary me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="h3 mb-0">Column Mapping</h1>
+                <p class="text-muted mb-0">Map Excel columns to database fields for {{ data_type }} import</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Data Preview -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-eye me-2"></i>Data Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">First 10 rows from your Excel file:</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    {% for column in columns %}
+                                    <th class="text-nowrap">{{ column }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview_data %}
+                                <tr>
+                                    {% for column in columns %}
+                                    <td class="text-nowrap">{{ row[column] or '-' }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column Mapping -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-link me-2"></i>Field Mapping
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <p class="text-muted">Map your Excel columns to the corresponding database fields:</p>
+                        
+                        {% if data_type == 'faculty' %}
+                        <div class="mapping-section">
+                            <h6 class="text-primary mb-3">Faculty Fields</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                <select name="field_first_name" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('first_name') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <select name="field_last_name" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('last_name') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <select name="field_email" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('email') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Designation</label>
+                                <select name="field_designation" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('designation') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Department</label>
+                                <select name="field_department" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('department') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Employee ID</label>
+                                <select name="field_employee_id" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('employee_id') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        {% elif data_type == 'subjects' %}
+                        <div class="mapping-section">
+                            <h6 class="text-success mb-3">Subject Fields</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Subject Name <span class="text-danger">*</span></label>
+                                <select name="field_name" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('name') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Subject Code <span class="text-danger">*</span></label>
+                                <select name="field_code" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('code') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Lecture Hours</label>
+                                <select name="field_lecture_hours" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('lecture_hours') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Tutorial Hours</label>
+                                <select name="field_tutorial_hours" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('tutorial_hours') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Practical Hours</label>
+                                <select name="field_practical_hours" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('practical_hours') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Semester <span class="text-danger">*</span></label>
+                                <select name="field_semester" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('semester') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Department <span class="text-danger">*</span></label>
+                                <select name="field_department" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('department') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Subject Type</label>
+                                <select name="field_subject_type" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('subject_type') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        {% elif data_type == 'assignments' %}
+                        <div class="mapping-section">
+                            <h6 class="text-warning mb-3">Assignment Fields</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Faculty Name <span class="text-danger">*</span></label>
+                                <select name="field_faculty_name" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('faculty_name') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Subject Name <span class="text-danger">*</span></label>
+                                <select name="field_subject_name" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('subject_name') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Lecture Hours</label>
+                                <select name="field_lecture_hours" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('lecture_hours') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Tutorial Hours</label>
+                                <select name="field_tutorial_hours" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('tutorial_hours') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Practical Hours</label>
+                                <select name="field_practical_hours" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('practical_hours') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Division</label>
+                                <select name="field_division" class="form-select">
+                                    <option value="">-- Select Column --</option>
+                                    {% for column in columns %}
+                                    <option value="{{ column }}" {% if suggestions.get('division') == column %}selected{% endif %}>{{ column }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Fields marked with <span class="text-danger">*</span> are required. 
+                            Unmapped optional fields will use default values.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('excel.import_data') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Upload
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-cogs me-2"></i>Process Import
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

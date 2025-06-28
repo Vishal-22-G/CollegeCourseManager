@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Subject Management - College CMS{% endblock %}
+
+{% block content %}
+<div class="subjects-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">Subject Management</h1>
+                <p class="text-muted mb-0">Manage course subjects and their details</p>
+            </div>
+            {% if current_user.role in ['admin', 'faculty'] %}
+            <div class="page-actions">
+                <a href="{{ url_for('subjects.add') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Subject
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ current_search }}" placeholder="Search by name or code">
+                </div>
+                <div class="col-md-2">
+                    <label for="department" class="form-label">Department</label>
+                    <select class="form-select" id="department" name="department">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" {% if dept == current_department %}selected{% endif %}>{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="semester" class="form-label">Semester</label>
+                    <select class="form-select" id="semester" name="semester">
+                        <option value="">All Semesters</option>
+                        {% for sem in semesters %}
+                        <option value="{{ sem }}" {% if sem|string == current_semester %}selected{% endif %}>Semester {{ sem }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="type" class="form-label">Type</label>
+                    <select class="form-select" id="type" name="type">
+                        <option value="">All Types</option>
+                        {% for type in subject_types %}
+                        <option value="{{ type }}" {% if type == current_type %}selected{% endif %}>{{ type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <a href="{{ url_for('subjects.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subjects List -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-book me-2"></i>Subjects ({{ subjects|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if subjects %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Code</th>
+                            <th>Type</th>
+                            <th>Semester</th>
+                            <th>Department</th>
+                            <th>Hours</th>
+                            <th>Total</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for subject in subjects %}
+                        <tr>
+                            <td>
+                                <div class="subject-info">
+                                    <div class="fw-bold">{{ subject.name }}</div>
+                                    {% if subject.division %}
+                                    <small class="text-muted">Division: {{ subject.division }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ subject.code }}</span></td>
+                            <td>
+                                <span class="badge {% if subject.subject_type == 'Elective' %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ subject.subject_type }}
+                                </span>
+                            </td>
+                            <td>{{ subject.semester }}</td>
+                            <td>{{ subject.department }}</td>
+                            <td>
+                                <div class="hours-breakdown">
+                                    <small class="text-muted">
+                                        L: {{ subject.lecture_hours }} | 
+                                        T: {{ subject.tutorial_hours }} | 
+                                        P: {{ subject.practical_hours }}
+                                    </small>
+                                </div>
+                            </td>
+                            <td><strong>{{ subject.total_hours }}</strong></td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    {% if current_user.role in ['admin', 'faculty'] %}
+                                    <a href="{{ url_for('subjects.edit', id=subject.id) }}" 
+                                       class="btn btn-sm btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if current_user.role == 'admin' %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            title="Delete" onclick="confirmDelete({{ subject.id }}, '{{ subject.name }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state text-center py-5">
+                <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                <h5>No Subjects Found</h5>
+                <p class="text-muted">
+                    {% if current_search or current_department or current_semester or current_type %}
+                    Try adjusting your search filters or <a href="{{ url_for('subjects.index') }}">view all subjects</a>.
+                    {% else %}
+                    Get started by adding your first subject.
+                    {% endif %}
+                </p>
+                {% if current_user.role in ['admin', 'faculty'] %}
+                <a href="{{ url_for('subjects.add') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Subject
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="subjectName"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone and will affect any related assignments.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(subjectId, subjectName) {
+    document.getElementById('subjectName').textContent = subjectName;
+    document.getElementById('deleteForm').action = '{{ url_for("subjects.delete", id=0) }}'.replace('0', subjectId);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

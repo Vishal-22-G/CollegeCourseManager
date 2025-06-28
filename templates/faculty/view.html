@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}{{ faculty.full_name }} - College CMS{% endblock %}
+
+{% block content %}
+<div class="faculty-view-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <a href="{{ url_for('faculty.index') }}" class="btn btn-outline-secondary me-3">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="h3 mb-0">{{ faculty.full_name }}</h1>
+                    <p class="text-muted mb-0">Faculty Details</p>
+                </div>
+            </div>
+            {% if current_user.role == 'admin' %}
+            <div class="page-actions">
+                <a href="{{ url_for('faculty.edit', id=faculty.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Faculty
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Faculty Information -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="faculty-avatar mb-3">
+                        <i class="fas fa-user-circle fa-5x text-primary"></i>
+                    </div>
+                    <h4 class="card-title">{{ faculty.full_name }}</h4>
+                    <p class="text-muted">{{ faculty.designation or 'Faculty Member' }}</p>
+                    
+                    <div class="faculty-info mt-4">
+                        <div class="info-item">
+                            <strong>Employee ID:</strong>
+                            <span>{{ faculty.employee_id or 'Not Set' }}</span>
+                        </div>
+                        <div class="info-item">
+                            <strong>Email:</strong>
+                            <span>{{ faculty.email }}</span>
+                        </div>
+                        <div class="info-item">
+                            <strong>Department:</strong>
+                            <span>{{ faculty.department or 'Not Set' }}</span>
+                        </div>
+                        <div class="info-item">
+                            <strong>Username:</strong>
+                            <span>{{ faculty.username }}</span>
+                        </div>
+                        <div class="info-item">
+                            <strong>Member Since:</strong>
+                            <span>{{ faculty.created_at.strftime('%B %d, %Y') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workload Information -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Workload Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="workload-stat">
+                                <div class="stat-number">{{ faculty.get_current_workload() }}</div>
+                                <div class="stat-label">Current Hours</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="workload-stat">
+                                <div class="stat-number">{{ faculty.get_workload_limit() }}</div>
+                                <div class="stat-label">Maximum Hours</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="workload-stat">
+                                <div class="stat-number">{{ faculty.get_workload_limit() - faculty.get_current_workload() }}</div>
+                                <div class="stat-label">Available Hours</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="workload-progress mt-4">
+                        {% set percentage = (faculty.get_current_workload() / faculty.get_workload_limit() * 100) if faculty.get_workload_limit() > 0 else 0 %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Workload Utilization</span>
+                            <span>{{ percentage|round(1) }}%</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar {% if percentage > 90 %}bg-danger{% elif percentage > 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 style="width: {{ percentage }}%"></div>
+                        </div>
+                        <div class="mt-2">
+                            {% if percentage > 90 %}
+                                <span class="badge bg-danger">Overloaded</span>
+                            {% elif percentage > 75 %}
+                                <span class="badge bg-warning">High Load</span>
+                            {% elif percentage > 0 %}
+                                <span class="badge bg-success">Normal Load</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No Assignments</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignments -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tasks me-2"></i>Current Assignments ({{ assignments|length }})
+                        </h5>
+                        {% if current_user.role in ['admin', 'faculty'] %}
+                        <a href="{{ url_for('assignments.assign') }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-2"></i>New Assignment
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if assignments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Code</th>
+                                    <th>Division</th>
+                                    <th>Lecture Hours</th>
+                                    <th>Tutorial Hours</th>
+                                    <th>Practical Hours</th>
+                                    <th>Total Hours</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in assignments %}
+                                <tr>
+                                    <td>
+                                        <div class="subject-info">
+                                            <div class="fw-bold">{{ assignment.subject.name }}</div>
+                                            <small class="text-muted">{{ assignment.subject.department }}</small>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-secondary">{{ assignment.subject.code }}</span></td>
+                                    <td>{{ assignment.division or '-' }}</td>
+                                    <td>{{ assignment.lecture_hours }}</td>
+                                    <td>{{ assignment.tutorial_hours }}</td>
+                                    <td>{{ assignment.practical_hours }}</td>
+                                    <td><strong>{{ assignment.total_hours }}</strong></td>
+                                    <td>
+                                        {% if current_user.role == 'admin' %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="confirmDeleteAssignment({{ assignment.id }}, '{{ assignment.subject.name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state text-center py-5">
+                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <h5>No Assignments</h5>
+                        <p class="text-muted">This faculty member has no current assignments.</p>
+                        {% if current_user.role in ['admin', 'faculty'] %}
+                        <a href="{{ url_for('assignments.assign') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Assign Subject
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Assignment Modal -->
+<div class="modal fade" id="deleteAssignmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove the assignment for <strong id="assignmentSubject"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteAssignmentForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Remove Assignment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDeleteAssignment(assignmentId, subjectName) {
+    document.getElementById('assignmentSubject').textContent = subjectName;
+    document.getElementById('deleteAssignmentForm').action = '{{ url_for("assignments.delete", id=0) }}'.replace('0', assignmentId);
+    new bootstrap.Modal(document.getElementById('deleteAssignmentModal')).show();
+}
+</script>
+{% endblock %}

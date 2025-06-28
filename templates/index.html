@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - College CMS{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+    <div class="hero-section">
+        <div class="container">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-6">
+                    <div class="hero-content">
+                        <h1 class="display-4 fw-bold text-primary mb-4">
+                            <i class="fas fa-university me-3"></i>
+                            College Management System
+                        </h1>
+                        <p class="lead text-muted mb-4">
+                            Streamline faculty workload management, subject assignments, and timetable scheduling with our comprehensive CMS solution.
+                        </p>
+                        <div class="hero-features mb-5">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="feature-item">
+                                        <i class="fas fa-chalkboard-teacher text-primary me-2"></i>
+                                        <span>Faculty Management</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="feature-item">
+                                        <i class="fas fa-book text-primary me-2"></i>
+                                        <span>Subject Management</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="feature-item">
+                                        <i class="fas fa-tasks text-primary me-2"></i>
+                                        <span>Workload Tracking</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="feature-item">
+                                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                        <span>Timetable Management</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hero-actions">
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg me-3">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                            </a>
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Register
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-image">
+                        <div class="dashboard-preview">
+                            <div class="preview-header">
+                                <div class="preview-dots">
+                                    <span class="dot red"></span>
+                                    <span class="dot yellow"></span>
+                                    <span class="dot green"></span>
+                                </div>
+                            </div>
+                            <div class="preview-content">
+                                <div class="preview-sidebar">
+                                    <div class="sidebar-item active"></div>
+                                    <div class="sidebar-item"></div>
+                                    <div class="sidebar-item"></div>
+                                    <div class="sidebar-item"></div>
+                                </div>
+                                <div class="preview-main">
+                                    <div class="preview-cards">
+                                        <div class="preview-card blue"></div>
+                                        <div class="preview-card green"></div>
+                                        <div class="preview-card orange"></div>
+                                        <div class="preview-card purple"></div>
+                                    </div>
+                                    <div class="preview-chart">
+                                        <div class="chart-bars">
+                                            <div class="bar" style="height: 60%"></div>
+                                            <div class="bar" style="height: 80%"></div>
+                                            <div class="bar" style="height: 45%"></div>
+                                            <div class="bar" style="height: 90%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="features-section py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="h1 fw-bold mb-3">Powerful Features</h2>
+                    <p class="lead text-muted">Everything you need to manage your college's academic operations efficiently</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Role-Based Access</h3>
+                        <p>Secure access control with different permissions for administrators, faculty, and students.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h3>Workload Analytics</h3>
+                        <p>Track and analyze faculty workload with intelligent assignment suggestions and conflict detection.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <h3>Excel Integration</h3>
+                        <p>Import data from Excel files with smart column mapping and validation features.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

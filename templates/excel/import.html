@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Import Data - College CMS{% endblock %}
+
+{% block content %}
+<div class="excel-import-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="h3 mb-0">Import Data</h1>
+                <p class="text-muted mb-0">Upload Excel files to import faculty, subjects, or assignments</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-excel me-2"></i>Upload Excel File
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-4">
+                            <label for="data_type" class="form-label">Data Type</label>
+                            {{ form.data_type(class="form-select") }}
+                            {% if form.data_type.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.data_type.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="file" class="form-label">Excel File</label>
+                            {{ form.file(class="form-control", accept=".xlsx,.xls,.csv") }}
+                            {% if form.file.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.file.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Supported formats: .xlsx, .xls, .csv (Maximum file size: 16MB)
+                            </div>
+                        </div>
+
+                        <!-- Data Format Guidelines -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="format-guide">
+                                    <h6><i class="fas fa-users text-primary me-2"></i>Faculty Data</h6>
+                                    <p class="small text-muted">Expected columns:</p>
+                                    <ul class="small">
+                                        <li>First Name</li>
+                                        <li>Last Name</li>
+                                        <li>Email</li>
+                                        <li>Designation</li>
+                                        <li>Department</li>
+                                        <li>Employee ID</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="format-guide">
+                                    <h6><i class="fas fa-book text-success me-2"></i>Subject Data</h6>
+                                    <p class="small text-muted">Expected columns:</p>
+                                    <ul class="small">
+                                        <li>Subject Name</li>
+                                        <li>Subject Code</li>
+                                        <li>Lecture Hours</li>
+                                        <li>Tutorial Hours</li>
+                                        <li>Practical Hours</li>
+                                        <li>Semester</li>
+                                        <li>Department</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="format-guide">
+                                    <h6><i class="fas fa-tasks text-warning me-2"></i>Assignment Data</h6>
+                                    <p class="small text-muted">Expected columns:</p>
+                                    <ul class="small">
+                                        <li>Faculty Name</li>
+                                        <li>Subject Name</li>
+                                        <li>Lecture Hours</li>
+                                        <li>Tutorial Hours</li>
+                                        <li>Practical Hours</li>
+                                        <li>Division</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Import Process:</strong>
+                            <ol class="mb-0 mt-2">
+                                <li>Upload your Excel file</li>
+                                <li>Preview and map columns to database fields</li>
+                                <li>Review and confirm the import</li>
+                                <li>Data will be processed and imported</li>
+                            </ol>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important Notes:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Duplicate entries will be skipped</li>
+                                <li>Invalid data will be flagged for review</li>
+                                <li>For faculty import, default password will be "password123"</li>
+                                <li>Column names are case-insensitive and flexible</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Upload & Preview
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sample Templates -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-download me-2"></i>Sample Templates
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Download sample Excel templates to ensure proper formatting:</p>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="template-card">
+                                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                <h6>Faculty Template</h6>
+                                <p class="small text-muted">Sample format for faculty data import</p>
+                                <a href="#" class="btn btn-sm btn-outline-primary" onclick="downloadTemplate('faculty')">
+                                    <i class="fas fa-download me-1"></i>Download
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="template-card">
+                                <i class="fas fa-book fa-2x text-success mb-2"></i>
+                                <h6>Subject Template</h6>
+                                <p class="small text-muted">Sample format for subject data import</p>
+                                <a href="#" class="btn btn-sm btn-outline-success" onclick="downloadTemplate('subjects')">
+                                    <i class="fas fa-download me-1"></i>Download
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="template-card">
+                                <i class="fas fa-tasks fa-2x text-warning mb-2"></i>
+                                <h6>Assignment Template</h6>
+                                <p class="small text-muted">Sample format for assignment data import</p>
+                                <a href="#" class="btn btn-sm btn-outline-warning" onclick="downloadTemplate('assignments')">
+                                    <i class="fas fa-download me-1"></i>Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function downloadTemplate(type) {
+    // Create sample CSV content
+    let csvContent = '';
+    let filename = '';
+    
+    switch(type) {
+        case 'faculty':
+            csvContent = 'First Name,Last Name,Email,Designation,Department,Employee ID\n';
+            csvContent += 'John,Doe,john.doe@college.edu,Assistant Prof,Computer Science,EMP001\n';
+            csvContent += 'Jane,Smith,jane.smith@college.edu,Associate Prof,Mathematics,EMP002\n';
+            filename = 'faculty_template.csv';
+            break;
+            
+        case 'subjects':
+            csvContent = 'Subject Name,Subject Code,Lecture Hours,Tutorial Hours,Practical Hours,Semester,Department,Type\n';
+            csvContent += 'Data Structures,CS201,3,1,2,3,Computer Science,Regular\n';
+            csvContent += 'Calculus,MATH101,4,2,0,1,Mathematics,Regular\n';
+            filename = 'subjects_template.csv';
+            break;
+            
+        case 'assignments':
+            csvContent = 'Faculty Name,Subject Name,Lecture Hours,Tutorial Hours,Practical Hours,Division\n';
+            csvContent += 'John Doe,Data Structures,3,1,2,A\n';
+            csvContent += 'Jane Smith,Calculus,4,2,0,B\n';
+            filename = 'assignments_template.csv';
+            break;
+    }
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

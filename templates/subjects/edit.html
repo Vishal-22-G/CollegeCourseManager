@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Subject - College CMS{% endblock %}
+
+{% block content %}
+<div class="subject-edit-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('subjects.index') }}" class="btn btn-outline-secondary me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="h3 mb-0">Edit Subject</h1>
+                <p class="text-muted mb-0">Update {{ subject.name }} information</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-2"></i>Subject Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="name" class="form-label">Subject Name</label>
+                                {{ form.name(class="form-control") }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.name.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="code" class="form-label">Subject Code</label>
+                                {{ form.code(class="form-control") }}
+                                {% if form.code.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.code.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="lecture_hours" class="form-label">Lecture Hours</label>
+                                {{ form.lecture_hours(class="form-control") }}
+                                {% if form.lecture_hours.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.lecture_hours.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="tutorial_hours" class="form-label">Tutorial Hours</label>
+                                {{ form.tutorial_hours(class="form-control") }}
+                                {% if form.tutorial_hours.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.tutorial_hours.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="practical_hours" class="form-label">Practical Hours</label>
+                                {{ form.practical_hours(class="form-control") }}
+                                {% if form.practical_hours.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.practical_hours.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="subject_type" class="form-label">Type</label>
+                                {{ form.subject_type(class="form-select") }}
+                                {% if form.subject_type.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.subject_type.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="semester" class="form-label">Semester</label>
+                                {{ form.semester(class="form-control") }}
+                                {% if form.semester.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.semester.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="department" class="form-label">Department</label>
+                                {{ form.department(class="form-control") }}
+                                {% if form.department.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.department.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="division" class="form-label">Division (Optional)</label>
+                                {{ form.division(class="form-control") }}
+                                {% if form.division.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.division.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('subjects.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Subject
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Imported Data - College CMS{% endblock %}
+
+{% block content %}
+<div class="imported-data-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">Imported Data</h1>
+                <p class="text-muted mb-0">View and manage all data import sessions</p>
+            </div>
+            <div class="page-actions">
+                <a href="{{ url_for('excel.import_data') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Import
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Sessions -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-database me-2"></i>Import History ({{ imports|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if imports %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Import Date</th>
+                            <th>File Name</th>
+                            <th>Data Type</th>
+                            <th>Total Rows</th>
+                            <th>Success</th>
+                            <th>Failed</th>
+                            <th>Success Rate</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for import_session in imports %}
+                        <tr>
+                            <td>
+                                <div class="import-date">
+                                    <div class="fw-bold">{{ import_session.import_date.strftime('%Y-%m-%d') }}</div>
+                                    <small class="text-muted">{{ import_session.import_date.strftime('%H:%M:%S') }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <i class="fas fa-file-excel text-success me-2"></i>
+                                {{ import_session.filename }}
+                            </td>
+                            <td>
+                                <span class="badge {% if import_session.data_type == 'faculty' %}bg-primary{% elif import_session.data_type == 'subjects' %}bg-success{% else %}bg-warning{% endif %}">
+                                    {{ import_session.data_type.title() }}
+                                </span>
+                            </td>
+                            <td>{{ import_session.total_rows }}</td>
+                            <td>
+                                <span class="text-success fw-bold">{{ import_session.successful_rows }}</span>
+                            </td>
+                            <td>
+                                {% if import_session.failed_rows > 0 %}
+                                <span class="text-danger fw-bold">{{ import_session.failed_rows }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set success_rate = (import_session.successful_rows / import_session.total_rows * 100) if import_session.total_rows > 0 else 0 %}
+                                <div class="success-rate">
+                                    <span class="fw-bold {% if success_rate == 100 %}text-success{% elif success_rate >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ success_rate|round(1) }}%
+                                    </span>
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        <div class="progress-bar {% if success_rate == 100 %}bg-success{% elif success_rate >= 75 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             style="width: {{ success_rate }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="viewImportDetails({{ import_session.id }})" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state text-center py-5">
+                <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                <h5>No Import History</h5>
+                <p class="text-muted">No data has been imported yet. Get started by uploading your first Excel file.</p>
+                <a href="{{ url_for('excel.import_data') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Import Data
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    {% if imports %}
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-upload fa-2x text-primary mb-2"></i>
+                    <h4>{{ imports|length }}</h4>
+                    <p class="text-muted mb-0">Total Imports</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <h4>{{ imports|sum(attribute='successful_rows') }}</h4>
+                    <p class="text-muted mb-0">Successful Records</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                    <h4>{{ imports|sum(attribute='failed_rows') }}</h4>
+                    <p class="text-muted mb-0">Failed Records</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                    {% set total_success = imports|sum(attribute='successful_rows') %}
+                    {% set total_records = imports|sum(attribute='total_rows') %}
+                    {% set overall_rate = (total_success / total_records * 100) if total_records > 0 else 0 %}
+                    <h4>{{ overall_rate|round(1) }}%</h4>
+                    <p class="text-muted mb-0">Overall Success Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Import Details Modal -->
+<div class="modal fade" id="importDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="importDetailsContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewImportDetails(importId) {
+    // In a real application, this would fetch details via AJAX
+    const modal = new bootstrap.Modal(document.getElementById('importDetailsModal'));
+    const content = document.getElementById('importDetailsContent');
+    
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading import details...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Simulate loading (replace with actual AJAX call)
+    setTimeout(() => {
+        content.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note:</strong> Detailed import logs would be displayed here in a full implementation.
+                This would include:
+                <ul class="mt-2 mb-0">
+                    <li>Row-by-row processing results</li>
+                    <li>Error messages for failed records</li>
+                    <li>Column mapping configuration used</li>
+                    <li>Data validation results</li>
+                </ul>
+            </div>
+            <p><strong>Import ID:</strong> ${importId}</p>
+            <p><strong>Status:</strong> <span class="badge bg-success">Completed</span></p>
+        `;
+    }, 1000);
+}
+</script>
+{% endblock %}

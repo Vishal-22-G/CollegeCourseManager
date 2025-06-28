@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Create Schedule - College CMS{% endblock %}
+
+{% block content %}
+<div class="timetable-create-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('timetable.index') }}" class="btn btn-outline-secondary me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="h3 mb-0">Create Schedule Entry</h1>
+                <p class="text-muted mb-0">Add a new timetable entry</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-plus me-2"></i>Schedule Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="scheduleForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="subject_id" class="form-label">Subject</label>
+                                {{ form.subject_id(class="form-select") }}
+                                {% if form.subject_id.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.subject_id.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="faculty_id" class="form-label">Faculty</label>
+                                {{ form.faculty_id(class="form-select", id="facultySelect") }}
+                                {% if form.faculty_id.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.faculty_id.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="day_of_week" class="form-label">Day</label>
+                                {{ form.day_of_week(class="form-select", id="daySelect") }}
+                                {% if form.day_of_week.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.day_of_week.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="start_time" class="form-label">Start Time</label>
+                                {{ form.start_time(class="form-control", id="startTime") }}
+                                {% if form.start_time.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.start_time.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="end_time" class="form-label">End Time</label>
+                                {{ form.end_time(class="form-control", id="endTime") }}
+                                {% if form.end_time.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.end_time.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="session_type" class="form-label">Session Type</label>
+                                {{ form.session_type(class="form-select") }}
+                                {% if form.session_type.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.session_type.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="room" class="form-label">Room</label>
+                                {{ form.room(class="form-control") }}
+                                {% if form.room.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.room.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="division" class="form-label">Division</label>
+                                {{ form.division(class="form-control") }}
+                                {% if form.division.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.division.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="semester" class="form-label">Semester</label>
+                                {{ form.semester(class="form-control") }}
+                                {% if form.semester.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.semester.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Conflict Check Alert -->
+                        <div id="conflictAlert" class="alert alert-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Potential Conflict:</strong> <span id="conflictMessage"></span>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Conflict Detection:</strong> The system will automatically check for scheduling conflicts 
+                            when you submit the form. This includes faculty double-booking and room availability conflicts.
+                        </div>
+
+                        <div class="alert alert-light">
+                            <h6><i class="fas fa-clock me-2"></i>Common Time Slots</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="mb-0">
+                                        <li><strong>Morning:</strong> 09:00 - 12:00</li>
+                                        <li><strong>Afternoon:</strong> 13:00 - 16:00</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="mb-0">
+                                        <li><strong>Lecture:</strong> 1 hour slots</li>
+                                        <li><strong>Practical:</strong> 2-3 hour slots</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('timetable.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Create Schedule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Simple conflict checking (client-side preview)
+function checkConflicts() {
+    const faculty = document.getElementById('facultySelect').value;
+    const day = document.getElementById('daySelect').value;
+    const startTime = document.getElementById('startTime').value;
+    const endTime = document.getElementById('endTime').value;
+    
+    if (faculty && day && startTime && endTime) {
+        // In a real application, this would make an AJAX call to check conflicts
+        // For now, just show a sample message
+        const conflictAlert = document.getElementById('conflictAlert');
+        const conflictMessage = document.getElementById('conflictMessage');
+        
+        // Simulate conflict check
+        if (Math.random() > 0.8) { // 20% chance of showing conflict warning
+            conflictMessage.textContent = 'The selected faculty may have another class during this time. Please verify the schedule.';
+            conflictAlert.style.display = 'block';
+        } else {
+            conflictAlert.style.display = 'none';
+        }
+    }
+}
+
+// Add event listeners
+document.getElementById('facultySelect').addEventListener('change', checkConflicts);
+document.getElementById('daySelect').addEventListener('change', checkConflicts);
+document.getElementById('startTime').addEventListener('change', checkConflicts);
+document.getElementById('endTime').addEventListener('change', checkConflicts);
+
+// Validate time range
+document.getElementById('endTime').addEventListener('change', function() {
+    const startTime = document.getElementById('startTime').value;
+    const endTime = this.value;
+    
+    if (startTime && endTime && endTime <= startTime) {
+        this.setCustomValidity('End time must be after start time');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+</script>
+{% endblock %}

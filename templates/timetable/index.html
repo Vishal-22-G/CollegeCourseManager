@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Timetable Management - College CMS{% endblock %}
+
+{% block content %}
+<div class="timetable-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">Timetable Management</h1>
+                <p class="text-muted mb-0">Manage class schedules and faculty assignments</p>
+            </div>
+            {% if current_user.role in ['admin', 'faculty'] %}
+            <div class="page-actions">
+                <a href="{{ url_for('timetable.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Schedule
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label for="semester" class="form-label">Semester</label>
+                    <select class="form-select" id="semester" name="semester">
+                        {% for sem in semesters %}
+                        <option value="{{ sem }}" {% if sem|string == current_semester %}selected{% endif %}>Semester {{ sem }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="division" class="form-label">Division</label>
+                    <select class="form-select" id="division" name="division">
+                        <option value="">All Divisions</option>
+                        {% for div in divisions %}
+                        <option value="{{ div }}" {% if div == current_division %}selected{% endif %}>Division {{ div }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-filter me-2"></i>Filter
+                        </button>
+                        <a href="{{ url_for('timetable.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Timetable Grid -->
+    {% if timetable_entries %}
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Schedule - Semester {{ current_semester }}
+                    {% if current_division %}(Division {{ current_division }}){% endif %}
+                </h5>
+                <div class="view-options">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary active" onclick="showGridView()">
+                            <i class="fas fa-th"></i> Grid View
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showListView()">
+                            <i class="fas fa-list"></i> List View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Grid View -->
+            <div id="gridView">
+                <div class="timetable-grid">
+                    <div class="table-responsive">
+                        <table class="table table-bordered timetable-table">
+                            <thead>
+                                <tr>
+                                    <th class="time-slot">Time</th>
+                                    <th>Monday</th>
+                                    <th>Tuesday</th>
+                                    <th>Wednesday</th>
+                                    <th>Thursday</th>
+                                    <th>Friday</th>
+                                    <th>Saturday</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for hour in range(9, 17) %}
+                                <tr>
+                                    <td class="time-slot fw-bold">{{ "%02d:00"|format(hour) }}</td>
+                                    {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                                    <td class="schedule-cell">
+                                        {% for entry in timetable_entries %}
+                                        {% if entry.day_of_week == day and entry.start_time.hour == hour %}
+                                        <div class="schedule-entry">
+                                            <div class="subject-name">{{ entry.subject.name }}</div>
+                                            <div class="faculty-name">{{ entry.faculty.full_name }}</div>
+                                            <div class="schedule-meta">
+                                                <span class="badge bg-primary">{{ entry.session_type }}</span>
+                                                {% if entry.room %}
+                                                <span class="badge bg-secondary">{{ entry.room }}</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if current_user.role == 'admin' %}
+                                            <div class="schedule-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="confirmDelete({{ entry.id }}, '{{ entry.subject.name }}')">
+                                                    <i class="fas fa-trash fa-xs"></i>
+                                                </button>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List View -->
+            <div id="listView" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Time</th>
+                                <th>Subject</th>
+                                <th>Faculty</th>
+                                <th>Type</th>
+                                <th>Room</th>
+                                <th>Division</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in timetable_entries %}
+                            <tr>
+                                <td><span class="badge bg-info">{{ entry.day_of_week }}</span></td>
+                                <td>{{ entry.start_time.strftime('%H:%M') }} - {{ entry.end_time.strftime('%H:%M') }}</td>
+                                <td>
+                                    <div class="subject-info">
+                                        <div class="fw-bold">{{ entry.subject.name }}</div>
+                                        <small class="text-muted">{{ entry.subject.code }}</small>
+                                    </div>
+                                </td>
+                                <td>{{ entry.faculty.full_name }}</td>
+                                <td><span class="badge bg-primary">{{ entry.session_type }}</span></td>
+                                <td>{{ entry.room or '-' }}</td>
+                                <td>{{ entry.division or '-' }}</td>
+                                <td>
+                                    {% if current_user.role == 'admin' %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="confirmDelete({{ entry.id }}, '{{ entry.subject.name }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state text-center py-5">
+                <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                <h5>No Schedule Found</h5>
+                <p class="text-muted">
+                    {% if current_semester or current_division %}
+                    No schedule entries found for the selected filters. Try adjusting your filters or 
+                    <a href="{{ url_for('timetable.index') }}">view all schedules</a>.
+                    {% else %}
+                    No timetable entries have been created yet.
+                    {% endif %}
+                </p>
+                {% if current_user.role in ['admin', 'faculty'] %}
+                <a href="{{ url_for('timetable.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create Schedule
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove Schedule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove this schedule entry?</p>
+                <p><strong>Subject:</strong> <span id="scheduleSubject"></span></p>
+                <p class="text-danger"><small>This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Remove Schedule</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showGridView() {
+    document.getElementById('gridView').style.display = 'block';
+    document.getElementById('listView').style.display = 'none';
+    
+    // Update button states
+    document.querySelectorAll('.view-options .btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.view-options .btn:first-child').classList.add('active');
+}
+
+function showListView() {
+    document.getElementById('gridView').style.display = 'none';
+    document.getElementById('listView').style.display = 'block';
+    
+    // Update button states
+    document.querySelectorAll('.view-options .btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.view-options .btn:last-child').classList.add('active');
+}
+
+function confirmDelete(entryId, subjectName) {
+    document.getElementById('scheduleSubject').textContent = subjectName;
+    document.getElementById('deleteForm').action = '{{ url_for("timetable.delete", id=0) }}'.replace('0', entryId);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

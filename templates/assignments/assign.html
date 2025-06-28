@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Subject - College CMS{% endblock %}
+
+{% block content %}
+<div class="assignment-assign-page">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('assignments.index') }}" class="btn btn-outline-secondary me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="h3 mb-0">Create Assignment</h1>
+                <p class="text-muted mb-0">Assign a subject to faculty member</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tasks me-2"></i>Assignment Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="assignmentForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="faculty_id" class="form-label">Faculty Member</label>
+                                {{ form.faculty_id(class="form-select", id="facultySelect") }}
+                                {% if form.faculty_id.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.faculty_id.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="subject_id" class="form-label">Subject</label>
+                                {{ form.subject_id(class="form-select") }}
+                                {% if form.subject_id.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.subject_id.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Faculty Workload Info -->
+                        <div id="facultyWorkloadInfo" class="alert alert-info" style="display: none;">
+                            <h6><i class="fas fa-info-circle me-2"></i>Faculty Workload Information</h6>
+                            <div id="workloadDetails"></div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="lecture_hours" class="form-label">Lecture Hours</label>
+                                {{ form.lecture_hours(class="form-control", id="lectureHours") }}
+                                {% if form.lecture_hours.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.lecture_hours.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="tutorial_hours" class="form-label">Tutorial Hours</label>
+                                {{ form.tutorial_hours(class="form-control", id="tutorialHours") }}
+                                {% if form.tutorial_hours.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.tutorial_hours.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="practical_hours" class="form-label">Practical Hours</label>
+                                {{ form.practical_hours(class="form-control", id="practicalHours") }}
+                                {% if form.practical_hours.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.practical_hours.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Total Hours</label>
+                                <div class="form-control bg-light" id="totalHours">0</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="division" class="form-label">Division (Optional)</label>
+                            {{ form.division(class="form-control") }}
+                            {% if form.division.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.division.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Workload Warning -->
+                        <div id="workloadWarning" class="alert alert-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Warning:</strong> This assignment will exceed the faculty member's workload limit.
+                        </div>
+
+                        <div class="alert alert-light">
+                            <h6><i class="fas fa-lightbulb me-2"></i>Assignment Guidelines</h6>
+                            <ul class="mb-0">
+                                <li><strong>Assistant Professor:</strong> Maximum 18 hours per week</li>
+                                <li><strong>Associate Professor:</strong> Maximum 16 hours per week</li>
+                                <li><strong>Professor:</strong> Maximum 14 hours per week</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('assignments.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Create Assignment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Faculty workload data (populated from backend)
+const facultyWorkloads = {
+    {% for choice in form.faculty_id.choices %}
+    {% if choice[0] %}
+    {{ choice[0] }}: {
+        name: "{{ choice[1] }}",
+        currentWorkload: 0, // This would be populated from backend
+        maxWorkload: 18 // This would be populated from backend based on designation
+    }{% if not loop.last %},{% endif %}
+    {% endif %}
+    {% endfor %}
+};
+
+// Update total hours calculation
+function updateTotalHours() {
+    const lecture = parseInt(document.getElementById('lectureHours').value) || 0;
+    const tutorial = parseInt(document.getElementById('tutorialHours').value) || 0;
+    const practical = parseInt(document.getElementById('practicalHours').value) || 0;
+    const total = lecture + tutorial + practical;
+    
+    document.getElementById('totalHours').textContent = total;
+    
+    // Check workload limit
+    const facultySelect = document.getElementById('facultySelect');
+    if (facultySelect.value && facultyWorkloads[facultySelect.value]) {
+        const faculty = facultyWorkloads[facultySelect.value];
+        const newTotal = faculty.currentWorkload + total;
+        const warningDiv = document.getElementById('workloadWarning');
+        
+        if (newTotal > faculty.maxWorkload) {
+            warningDiv.style.display = 'block';
+        } else {
+            warningDiv.style.display = 'none';
+        }
+    }
+}
+
+// Update faculty workload info
+function updateFacultyInfo() {
+    const facultySelect = document.getElementById('facultySelect');
+    const infoDiv = document.getElementById('facultyWorkloadInfo');
+    const detailsDiv = document.getElementById('workloadDetails');
+    
+    if (facultySelect.value && facultyWorkloads[facultySelect.value]) {
+        const faculty = facultyWorkloads[facultySelect.value];
+        const percentage = (faculty.currentWorkload / faculty.maxWorkload * 100).toFixed(1);
+        
+        detailsDiv.innerHTML = `
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Current Workload:</strong> ${faculty.currentWorkload} hours
+                </div>
+                <div class="col-md-4">
+                    <strong>Maximum Limit:</strong> ${faculty.maxWorkload} hours
+                </div>
+                <div class="col-md-4">
+                    <strong>Utilization:</strong> ${percentage}%
+                </div>
+            </div>
+            <div class="progress mt-2" style="height: 6px;">
+                <div class="progress-bar ${percentage > 90 ? 'bg-danger' : percentage > 75 ? 'bg-warning' : 'bg-success'}" 
+                     style="width: ${percentage}%"></div>
+            </div>
+        `;
+        infoDiv.style.display = 'block';
+    } else {
+        infoDiv.style.display = 'none';
+    }
+    
+    updateTotalHours();
+}
+
+// Event listeners
+document.getElementById('facultySelect').addEventListener('change', updateFacultyInfo);
+document.getElementById('lectureHours').addEventListener('input', updateTotalHours);
+document.getElementById('tutorialHours').addEventListener('input', updateTotalHours);
+document.getElementById('practicalHours').addEventListener('input', updateTotalHours);
+
+// Initialize
+updateFacultyInfo();
+</script>
+{% endblock %}
