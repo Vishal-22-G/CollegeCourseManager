@@ -1,0 +1,193 @@
+Perfect — here's a **complete, advanced prompt to create your College CMS project from scratch**, including **core features, modern UI**, and **suggested advanced functionality** to make it **future-proof and scalable**. This prompt is designed to allow **easy extensions and upgrades** later, as you requested.
+
+---
+
+## 🧠 MASTER DEVELOPMENT PROMPT: Advanced College CMS From Scratch
+
+> **Goal**: Build a full-featured, scalable, clean, and extensible CMS for managing **faculty workload, subject delegation, timetable management, and Excel data integration**.
+
+### ⚙️ Stack Suggestion:
+
+* **Frontend**: React + TailwindCSS or Next.js + ShadCN
+* **Backend**: Django REST Framework / Flask with SQLAlchemy
+* **Database**: PostgreSQL or MySQL (dynamic schema support)
+* **Excel Parser**: pandas + openpyxl (Python)
+* **Auth**: JWT / Session + Role-Based Access (Admin, Faculty, Student)
+
+---
+
+## 🚀 CORE MODULES
+
+### 🔑 1. AUTH & ROLES
+
+* User registration + login
+* Roles: `Admin`, `Faculty`, `Student`
+* Dashboard layout changes per role
+
+---
+
+### 🏛️ 2. FACULTY MANAGEMENT
+
+* Add/Edit/Delete faculty
+* Assign designation: `Assistant Prof.`, `Associate Prof.`, `Professor`
+* Set workload limits:
+
+  * Assistant Prof: 18 hrs
+  * Associate Prof: 16 hrs
+  * Professor: 14 hrs
+* View per-faculty workload:
+
+  * Assigned lectures/tutorials/practicals
+  * Completed vs pending work
+
+---
+
+### 📘 3. SUBJECTS MODULE
+
+* Add subjects with:
+
+  * Name, Code, Lecture Hours, Tutorial Hours, Practical Hours
+  * Type: `Regular` or `Elective`
+  * Semester, Department, Division
+* Display with filters: semester, department, type
+
+---
+
+### 🧾 4. EXCEL IMPORT & COLUMN MAPPING
+
+* Upload Excel file (XLSX or CSV)
+* Show preview (first 10 rows)
+* Auto-detect headers and allow **column-to-field mapping**
+
+  * Example:
+
+    ```
+    "Faculty Name" → faculty_name
+    "Lecture Hours" → lecture_hours
+    ```
+* Create new DB columns dynamically if not present
+* Save mapping template
+* Show import result (added/updated/skipped rows)
+* Display imported data in a separate page with filter/search/export
+
+---
+
+### 🧑‍🏫 5. TASK/WORKLOAD ASSIGNMENT
+
+* Assign subjects (lecture/tutorial/practical) to faculty
+* Calculate workload in real-time
+* Check if workload limit exceeded before assigning
+* Search subjects by name/code/type
+* Filter by semester/department/elective
+* View faculty load chart: bar or pie view
+
+---
+
+### 📅 6. TIMETABLE MANAGEMENT
+
+* Create and manage timetables per **division/semester**
+* Assign subjects to slots:
+
+  * Subject, Faculty, Room, Day, Time Slot
+* Drag-and-drop interface (optional)
+* Conflict detection (faculty double-booked, room clash)
+* Export as PDF or image
+* Separate timetable views:
+
+  * Admin → full timetable
+  * Faculty → only assigned lectures
+  * Student → by division
+
+---
+
+### 📂 7. ADVANCED VIEWS & DASHBOARDS
+
+* 📊 Dashboard (cards, charts):
+
+  * Total faculty, lectures assigned, workload used, pending
+* 🧠 Analytics:
+
+  * Most loaded departments/faculty
+  * Elective vs Regular subject ratio
+* 🔎 Global Search:
+
+  * Search across subject, faculty, division, semester
+
+---
+
+## ✨ ADVANCED FEATURES (To Plan/Future-Proof)
+
+1. **Notifications**
+
+   * Alert faculty on assigned workloads or changes
+
+2. **Drag-and-Drop Timetable Editor**
+
+   * Reschedule lectures with real-time validation
+
+3. **Custom Workload Rules**
+
+   * Editable workload caps per designation
+
+4. **Approval Workflows**
+
+   * Faculty submit lecture report → Admin approves
+
+5. **AI Assistant (Optional Later)**
+
+   * Suggest best faculty based on availability & experience
+   * Auto-generate timetable
+
+6. **Audit Logs**
+
+   * Track who made what change
+
+7. **Export All Data**
+
+   * As Excel, PDF, or JSON
+
+8. **Multi-Year Academic Support**
+
+   * Track year-wise performance and workload
+
+---
+
+## 📐 UI/UX Guidelines
+
+Use Tailwind or Bootstrap 5 for clean components:
+
+* Sidebar navigation with icons
+* Tabbed filters, dropdown selectors
+* Responsive cards, tables with hover highlights
+* Toasts for success/error
+* Modal forms for actions
+
+---
+
+## 🛠️ Suggested Pages to Build
+
+| Page             | Key Elements                                                  |
+| ---------------- | ------------------------------------------------------------- |
+| `/dashboard`     | Cards + charts (workload, tasks, faculty summary)             |
+| `/faculty`       | Table view + filters + add/edit/view workload                 |
+| `/subjects`      | Table + add/edit + filters (semester, elective, etc.)         |
+| `/assign-task`   | Faculty ↔ subject assigner with real-time workload update     |
+| `/import-excel`  | Upload → preview → map → import                               |
+| `/imported-data` | Table view of all Excel rows with filter/search/export        |
+| `/timetable`     | Division-based view + assign lectures                         |
+| `/settings`      | Designation caps, workload formulas, year/semester management |
+
+---
+
+## 📦 FINAL DELIVERABLES
+
+* Clean, modern CMS UI
+* API-driven backend (Django/Flask)
+* Excel import with dynamic mapping
+* Role-based views (admin, faculty, student)
+* Timetable builder with conflict detection
+* Smart workload management
+* Extendable system for new modules
+
+---
+
