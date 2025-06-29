@@ -291,7 +291,7 @@ def import_faculty_row_universal(row, mapping, skip_validation=False):
         data = {}
         for excel_col, db_field in mapping.items():
             value = row.get(excel_col)
-            if value is not None and str(value).strip():
+            if value is not None and pd.notna(value) and str(value).strip() and str(value).lower() != 'nan':
                 data[db_field] = str(value).strip()
         
         # Required fields with fallbacks
@@ -335,12 +335,21 @@ def import_subject_row_universal(row, mapping, skip_validation=False):
         data = {}
         for excel_col, db_field in mapping.items():
             value = row.get(excel_col)
-            if value is not None:
+            if value is not None and pd.notna(value):  # Filter out NaN values
                 data[db_field] = value
         
         # Required fields with defaults
-        name = data.get('name') or f"Subject_{row.name}"
-        code = data.get('code') or f"SUB{row.name:03d}"
+        name = data.get('name')
+        if not name or pd.isna(name) or str(name).strip() == '' or str(name).lower() == 'nan':
+            name = f"Subject_{row.name}"
+        else:
+            name = str(name).strip()
+            
+        code = data.get('code')
+        if not code or pd.isna(code) or str(code).strip() == '' or str(code).lower() == 'nan':
+            code = f"SUB{row.name:03d}"
+        else:
+            code = str(code).strip()
         
         # Check if subject already exists
         existing_subject = Subject.query.filter(
@@ -357,13 +366,30 @@ def import_subject_row_universal(row, mapping, skip_validation=False):
         subject = Subject()
         subject.name = name
         subject.code = code
-        subject.lecture_hours = int(data.get('lecture_hours', 0) or 0)
-        subject.tutorial_hours = int(data.get('tutorial_hours', 0) or 0)
-        subject.practical_hours = int(data.get('practical_hours', 0) or 0)
-        subject.subject_type = data.get('subject_type', 'Regular')
-        subject.semester = int(data.get('semester', 1))
-        subject.department = data.get('department', 'General')
-        subject.division = data.get('division')
+        
+        # Handle numeric fields with NaN checking
+        def safe_int(value, default=0):
+            if value is None or pd.isna(value) or str(value).lower() == 'nan':
+                return default
+            try:
+                return int(float(value))
+            except (ValueError, TypeError):
+                return default
+        
+        subject.lecture_hours = safe_int(data.get('lecture_hours'), 0)
+        subject.tutorial_hours = safe_int(data.get('tutorial_hours'), 0)
+        subject.practical_hours = safe_int(data.get('practical_hours'), 0)
+        subject.semester = safe_int(data.get('semester'), 1)
+        
+        # Handle string fields with NaN checking
+        def safe_str(value, default=''):
+            if value is None or pd.isna(value) or str(value).lower() == 'nan':
+                return default
+            return str(value).strip()
+        
+        subject.subject_type = safe_str(data.get('subject_type'), 'Regular')
+        subject.department = safe_str(data.get('department'), 'General')
+        subject.division = safe_str(data.get('division'), None)
         
         db.session.add(subject)
         return True
@@ -379,7 +405,7 @@ def import_assignment_row_universal(row, mapping, skip_validation=False):
         data = {}
         for excel_col, db_field in mapping.items():
             value = row.get(excel_col)
-            if value is not None:
+            if value is not None and pd.notna(value) and str(value).lower() != 'nan':
                 data[db_field] = value
         
         # Find faculty and subject by various methods
