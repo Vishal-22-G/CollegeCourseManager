@@ -50,17 +50,16 @@ def register():
         if existing_user:
             flash('Username or email already exists', 'danger')
         else:
-            user = User(
-                username=form.username.data,
-                email=form.email.data,
-                password_hash=generate_password_hash(form.password.data),
-                first_name=form.first_name.data,
-                last_name=form.last_name.data,
-                role=form.role.data,
-                designation=form.designation.data if form.role.data == 'faculty' else None,
-                department=form.department.data if form.role.data == 'faculty' else None,
-                employee_id=form.employee_id.data if form.role.data == 'faculty' else None
-            )
+            user = User()
+            user.username = form.username.data
+            user.email = form.email.data
+            user.password_hash = generate_password_hash(form.password.data)
+            user.first_name = form.first_name.data
+            user.last_name = form.last_name.data
+            user.role = form.role.data
+            user.designation = form.designation.data if form.role.data == 'faculty' else None
+            user.department = form.department.data if form.role.data == 'faculty' else None
+            user.employee_id = form.employee_id.data if form.role.data == 'faculty' else None
             db.session.add(user)
             db.session.commit()
             flash('Registration successful! Please login.', 'success')
@@ -147,17 +146,16 @@ def add():
         if existing_user:
             flash('Username or email already exists', 'danger')
         else:
-            faculty = User(
-                username=form.username.data,
-                email=form.email.data,
-                password_hash=generate_password_hash('password123'),  # Default password
-                first_name=form.first_name.data,
-                last_name=form.last_name.data,
-                role='faculty',
-                designation=form.designation.data,
-                department=form.department.data,
-                employee_id=form.employee_id.data
-            )
+            faculty = User()
+            faculty.username = form.username.data
+            faculty.email = form.email.data
+            faculty.password_hash = generate_password_hash('password123')  # Default password
+            faculty.first_name = form.first_name.data
+            faculty.last_name = form.last_name.data
+            faculty.role = 'faculty'
+            faculty.designation = form.designation.data
+            faculty.department = form.department.data
+            faculty.employee_id = form.employee_id.data
             db.session.add(faculty)
             db.session.commit()
             flash('Faculty member added successfully!', 'success')
@@ -297,17 +295,16 @@ def add():
         if existing_subject:
             flash('Subject code already exists', 'danger')
         else:
-            subject = Subject(
-                name=form.name.data,
-                code=form.code.data,
-                lecture_hours=form.lecture_hours.data,
-                tutorial_hours=form.tutorial_hours.data,
-                practical_hours=form.practical_hours.data,
-                subject_type=form.subject_type.data,
-                semester=form.semester.data,
-                department=form.department.data,
-                division=form.division.data
-            )
+            subject = Subject()
+            subject.name = form.name.data
+            subject.code = form.code.data
+            subject.lecture_hours = form.lecture_hours.data
+            subject.tutorial_hours = form.tutorial_hours.data
+            subject.practical_hours = form.practical_hours.data
+            subject.subject_type = form.subject_type.data
+            subject.semester = form.semester.data
+            subject.department = form.department.data
+            subject.division = form.division.data
             db.session.add(subject)
             db.session.commit()
             flash('Subject added successfully!', 'success')
@@ -427,19 +424,18 @@ def assign():
         else:
             # Check workload limit
             faculty = User.query.get(form.faculty_id.data)
-            total_hours = form.lecture_hours.data + form.tutorial_hours.data + form.practical_hours.data
+            total_hours = (form.lecture_hours.data or 0) + (form.tutorial_hours.data or 0) + (form.practical_hours.data or 0)
             
-            if not faculty.can_assign_workload(total_hours):
+            if faculty and not faculty.can_assign_workload(total_hours):
                 flash(f'Cannot assign {total_hours} hours. Faculty workload limit exceeded. Current: {faculty.get_current_workload()}, Limit: {faculty.get_workload_limit()}', 'danger')
             else:
-                assignment = Assignment(
-                    faculty_id=form.faculty_id.data,
-                    subject_id=form.subject_id.data,
-                    lecture_hours=form.lecture_hours.data,
-                    tutorial_hours=form.tutorial_hours.data,
-                    practical_hours=form.practical_hours.data,
-                    division=form.division.data
-                )
+                assignment = Assignment()
+                assignment.faculty_id = form.faculty_id.data
+                assignment.subject_id = form.subject_id.data
+                assignment.lecture_hours = form.lecture_hours.data
+                assignment.tutorial_hours = form.tutorial_hours.data
+                assignment.practical_hours = form.practical_hours.data
+                assignment.division = form.division.data
                 db.session.add(assignment)
                 db.session.commit()
                 flash('Assignment created successfully!', 'success')
@@ -562,6 +558,8 @@ def column_mapping():
 def render_column_mapping_page(form, df, data_type, columns):
     """Helper function to render column mapping page"""
     from utils import get_available_db_fields, get_column_suggestions, infer_data_type
+    from flask import session
+    import os
     
     # Get available database fields for this data type
     available_fields = get_available_db_fields(data_type)
@@ -661,17 +659,16 @@ def create():
         if conflict:
             flash('Time conflict detected! Faculty is already scheduled during this time.', 'danger')
         else:
-            timetable_entry = TimetableEntry(
-                subject_id=form.subject_id.data,
-                faculty_id=form.faculty_id.data,
-                day_of_week=form.day_of_week.data,
-                start_time=form.start_time.data,
-                end_time=form.end_time.data,
-                room=form.room.data,
-                division=form.division.data,
-                semester=form.semester.data,
-                session_type=form.session_type.data
-            )
+            timetable_entry = TimetableEntry()
+            timetable_entry.subject_id = form.subject_id.data
+            timetable_entry.faculty_id = form.faculty_id.data
+            timetable_entry.day_of_week = form.day_of_week.data
+            timetable_entry.start_time = form.start_time.data
+            timetable_entry.end_time = form.end_time.data
+            timetable_entry.room = form.room.data
+            timetable_entry.division = form.division.data
+            timetable_entry.semester = form.semester.data
+            timetable_entry.session_type = form.session_type.data
             db.session.add(timetable_entry)
             db.session.commit()
             flash('Timetable entry created successfully!', 'success')

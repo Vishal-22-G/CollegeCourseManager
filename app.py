@@ -65,14 +65,13 @@ with app.app_context():
     
     admin = User.query.filter_by(username='admin').first()
     if not admin:
-        admin = User(
-            username='admin',
-            email='admin@college.edu',
-            password_hash=generate_password_hash('admin123'),
-            first_name='System',
-            last_name='Administrator',
-            role='admin'
-        )
+        admin = User()
+        admin.username = 'admin'
+        admin.email = 'admin@college.edu'
+        admin.password_hash = generate_password_hash('admin123')
+        admin.first_name = 'System'
+        admin.last_name = 'Administrator'
+        admin.role = 'admin'
         db.session.add(admin)
         db.session.commit()
         logging.info("Default admin user created: admin/admin123")

@@ -171,7 +171,7 @@ def infer_data_type(series):
     
     return 'TEXT'
 
-def create_missing_columns(table_name, columns_to_add):
+def create_missing_columns_helper(table_name, columns_to_add):
     """Dynamically add missing columns to database table"""
     try:
         inspector = inspect(db.engine)
@@ -217,17 +217,16 @@ def process_imported_data_universal(df, mapping, data_type, filename, skip_valid
     if create_missing_columns and columns_to_create:
         table_name = {'faculty': 'user', 'subjects': 'subject', 'assignments': 'assignment'}.get(data_type)
         if table_name:
-            create_missing_columns(table_name, columns_to_create)
+            create_missing_columns_helper(table_name, columns_to_create)
     
     # Create import session
-    import_session = ImportedData(
-        filename=filename,
-        data_type=data_type,
-        total_rows=len(df),
-        successful_rows=0,
-        failed_rows=0,
-        mapping_config=json.dumps(cleaned_mapping)
-    )
+    import_session = ImportedData()
+    import_session.filename = filename
+    import_session.data_type = data_type
+    import_session.total_rows = len(df)
+    import_session.successful_rows = 0
+    import_session.failed_rows = 0
+    import_session.mapping_config = json.dumps(cleaned_mapping)
     
     try:
         db.session.add(import_session)
@@ -266,12 +265,11 @@ def process_imported_data_universal(df, mapping, data_type, filename, skip_valid
                     db.session.rollback()
             
             # Log row result
-            row_log = ImportedDataRow(
-                import_id=import_session.id,
-                row_data=json.dumps(row.to_dict(), default=str),
-                status=status,
-                error_message=error_msg
-            )
+            row_log = ImportedDataRow()
+            row_log.import_id = import_session.id
+            row_log.row_data = json.dumps(row.to_dict(), default=str)
+            row_log.status = status
+            row_log.error_message = error_msg
             db.session.add(row_log)
         
         # Update import session statistics
@@ -312,17 +310,16 @@ def import_faculty_row_universal(row, mapping, skip_validation=False):
                 return False  # Fail on duplicate
         
         # Create new faculty user
-        faculty = User(
-            username=username,
-            email=email,
-            password_hash=generate_password_hash('default123'),
-            first_name=data.get('first_name', 'Unknown'),
-            last_name=data.get('last_name', 'User'),
-            role='faculty',
-            designation=data.get('designation', 'Assistant Prof'),
-            department=data.get('department', 'General'),
-            employee_id=data.get('employee_id')
-        )
+        faculty = User()
+        faculty.username = username
+        faculty.email = email
+        faculty.password_hash = generate_password_hash('default123')
+        faculty.first_name = data.get('first_name', 'Unknown')
+        faculty.last_name = data.get('last_name', 'User')
+        faculty.role = 'faculty'
+        faculty.designation = data.get('designation', 'Assistant Prof')
+        faculty.department = data.get('department', 'General')
+        faculty.employee_id = data.get('employee_id')
         
         db.session.add(faculty)
         return True
@@ -357,17 +354,16 @@ def import_subject_row_universal(row, mapping, skip_validation=False):
                 return False  # Fail on duplicate
         
         # Create new subject with zero-allowed values
-        subject = Subject(
-            name=name,
-            code=code,
-            lecture_hours=int(data.get('lecture_hours', 0) or 0),
-            tutorial_hours=int(data.get('tutorial_hours', 0) or 0),
-            practical_hours=int(data.get('practical_hours', 0) or 0),
-            subject_type=data.get('subject_type', 'Regular'),
-            semester=int(data.get('semester', 1)),
-            department=data.get('department', 'General'),
-            division=data.get('division')
-        )
+        subject = Subject()
+        subject.name = name
+        subject.code = code
+        subject.lecture_hours = int(data.get('lecture_hours', 0) or 0)
+        subject.tutorial_hours = int(data.get('tutorial_hours', 0) or 0)
+        subject.practical_hours = int(data.get('practical_hours', 0) or 0)
+        subject.subject_type = data.get('subject_type', 'Regular')
+        subject.semester = int(data.get('semester', 1))
+        subject.department = data.get('department', 'General')
+        subject.division = data.get('division')
         
         db.session.add(subject)
         return True
@@ -433,15 +429,14 @@ def import_assignment_row_universal(row, mapping, skip_validation=False):
                 return False
         
         # Create new assignment with zero-allowed values
-        assignment = Assignment(
-            faculty_id=faculty.id,
-            subject_id=subject.id,
-            lecture_hours=int(data.get('lecture_hours', 0) or 0),
-            tutorial_hours=int(data.get('tutorial_hours', 0) or 0),
-            practical_hours=int(data.get('practical_hours', 0) or 0),
-            division=data.get('division'),
-            academic_year=data.get('academic_year', '2024-25')
-        )
+        assignment = Assignment()
+        assignment.faculty_id = faculty.id
+        assignment.subject_id = subject.id
+        assignment.lecture_hours = int(data.get('lecture_hours', 0) or 0)
+        assignment.tutorial_hours = int(data.get('tutorial_hours', 0) or 0)
+        assignment.practical_hours = int(data.get('practical_hours', 0) or 0)
+        assignment.division = data.get('division')
+        assignment.academic_year = data.get('academic_year', '2024-25')
         
         db.session.add(assignment)
         return True
@@ -498,14 +493,13 @@ def old_get_column_suggestions_backup(df, data_type):
 def process_imported_data(df, mapping, data_type, filename):
     """Process imported data and save to database"""
     # Create import session
-    import_session = ImportedData(
-        filename=filename,
-        data_type=data_type,
-        total_rows=len(df),
-        successful_rows=0,
-        failed_rows=0,
-        mapping_config=json.dumps(mapping)
-    )
+    import_session = ImportedData()
+    import_session.filename = filename
+    import_session.data_type = data_type
+    import_session.total_rows = len(df)
+    import_session.successful_rows = 0
+    import_session.failed_rows = 0
+    import_session.mapping_config = json.dumps(mapping)
     
     try:
         db.session.add(import_session)
@@ -544,12 +538,11 @@ def process_imported_data(df, mapping, data_type, filename):
             
             # Save row data record
             try:
-                row_record = ImportedDataRow(
-                    import_id=import_session.id,
-                    row_data=json.dumps(row.to_dict()),
-                    status=status,
-                    error_message=error_msg
-                )
+                row_record = ImportedDataRow()
+                row_record.import_id = import_session.id
+                row_record.row_data = json.dumps(row.to_dict())
+                row_record.status = status
+                row_record.error_message = error_msg
                 db.session.add(row_record)
                 db.session.commit()
             except Exception as e:
@@ -592,17 +585,16 @@ def import_faculty_row(row, mapping):
         department = str(row.get(mapping.get('department', ''), '')).strip()[:100]
         employee_id = str(row.get(mapping.get('employee_id', ''), '')).strip()[:20]
         
-        user = User(
-            username=username,
-            email=email,
-            password_hash=generate_password_hash('password123'),  # Default password
-            first_name=first_name,
-            last_name=last_name,
-            role='faculty',
-            designation=designation,
-            department=department,
-            employee_id=employee_id
-        )
+        user = User()
+        user.username = username
+        user.email = email
+        user.password_hash = generate_password_hash('password123')  # Default password
+        user.first_name = first_name
+        user.last_name = last_name
+        user.role = 'faculty'
+        user.designation = designation
+        user.department = department
+        user.employee_id = employee_id
         
         db.session.add(user)
         db.session.flush()  # Flush to catch any constraint violations early
@@ -644,16 +636,15 @@ def import_subject_row(row, mapping):
         department = str(row.get(mapping.get('department', ''), '')).strip()[:100]
         subject_type = str(row.get(mapping.get('subject_type', ''), 'Regular')).strip()[:20]
         
-        subject = Subject(
-            name=name,
-            code=code,
-            lecture_hours=lecture_hours,
-            tutorial_hours=tutorial_hours,
-            practical_hours=practical_hours,
-            semester=semester,
-            department=department,
-            subject_type=subject_type
-        )
+        subject = Subject()
+        subject.name = name
+        subject.code = code
+        subject.lecture_hours = lecture_hours
+        subject.tutorial_hours = tutorial_hours
+        subject.practical_hours = practical_hours
+        subject.semester = semester
+        subject.department = department
+        subject.subject_type = subject_type
         
         db.session.add(subject)
         db.session.flush()  # Flush to catch any constraint violations early
@@ -703,14 +694,13 @@ def import_assignment_row(row, mapping):
         
         division = str(row.get(mapping.get('division', ''), '')).strip()[:10]
         
-        assignment = Assignment(
-            faculty_id=faculty.id,
-            subject_id=subject.id,
-            lecture_hours=lecture_hours,
-            tutorial_hours=tutorial_hours,
-            practical_hours=practical_hours,
-            division=division
-        )
+        assignment = Assignment()
+        assignment.faculty_id = faculty.id
+        assignment.subject_id = subject.id
+        assignment.lecture_hours = lecture_hours
+        assignment.tutorial_hours = tutorial_hours
+        assignment.practical_hours = practical_hours
+        assignment.division = division
         
         db.session.add(assignment)
         db.session.flush()  # Flush to catch any constraint violations early
