@@ -505,52 +505,93 @@ def column_mapping():
         return redirect(url_for('main.dashboard'))
     
     from flask import session
+    from utils import get_available_db_fields, get_column_suggestions, infer_data_type, process_imported_data_universal
     
+    # Check if session data exists
     if 'excel_file' not in session:
-        flash('No file uploaded', 'danger')
+        flash('No file uploaded. Please upload a file first.', 'warning')
         return redirect(url_for('excel.import_data'))
     
     filepath = session['excel_file']
     data_type = session['data_type']
     columns = session['columns']
-    preview_data = session['preview_data']
     
+    # Read file again for processing
     df = read_excel_file(filepath)
     if df is None:
         flash('Error reading Excel file', 'danger')
         return redirect(url_for('excel.import_data'))
     
-    # Get column suggestions
-    suggestions = get_column_suggestions(df, data_type)
+    form = ColumnMappingForm()
     
-    if request.method == 'POST':
-        # Get mapping from form
+    if form.validate_on_submit():
+        # Parse mapping data from form
         mapping = {}
-        for key in request.form:
-            if key.startswith('field_') and request.form[key]:
-                field_name = key.replace('field_', '')
-                mapping[field_name] = request.form[key]
+        for col in columns:
+            field_name = f"mapping_{col}"
+            if field_name in request.form:
+                value = request.form[field_name]
+                if value:
+                    mapping[col] = value
         
         if not mapping:
-            flash('Please map at least one field', 'danger')
-        else:
-            # Process the data
-            import_session = process_imported_data(df, mapping, data_type, os.path.basename(filepath))
-            
+            flash('Please map at least one column before importing.', 'warning')
+            return render_column_mapping_page(form, df, data_type, columns)
+        
+        # Start import process with universal system
+        skip_validation = form.skip_validation.data
+        create_missing_columns = form.create_missing_columns.data
+        
+        import_session = process_imported_data_universal(
+            df, mapping, data_type, filepath, skip_validation, create_missing_columns
+        )
+        
+        if import_session:
+            flash(f'Import completed! {import_session.successful_rows} rows imported successfully, {import_session.failed_rows} rows failed.', 'success')
             # Clean up session
             session.pop('excel_file', None)
             session.pop('data_type', None)
             session.pop('columns', None)
             session.pop('preview_data', None)
-            
-            flash(f'Import completed! {import_session.successful_rows} rows imported successfully, {import_session.failed_rows} rows failed.', 'success')
             return redirect(url_for('excel.imported_data'))
+        else:
+            flash('Import failed. Please check your data and try again.', 'danger')
     
-    return render_template('excel/mapping.html',
+    return render_column_mapping_page(form, df, data_type, columns)
+
+def render_column_mapping_page(form, df, data_type, columns):
+    """Helper function to render column mapping page"""
+    from utils import get_available_db_fields, get_column_suggestions, infer_data_type
+    
+    # Get available database fields for this data type
+    available_fields = get_available_db_fields(data_type)
+    
+    # Get smart column suggestions
+    suggestions = get_column_suggestions(df, data_type)
+    
+    # Get sample data for preview (first 3 non-null values per column)
+    preview_data = {}
+    for col in columns:
+        non_null_values = df[col].dropna().astype(str).tolist()
+        preview_data[col] = non_null_values[:3] if non_null_values else ['(empty)']
+    
+    # Infer data types for each column
+    inferred_types = {}
+    for col in columns:
+        inferred_types[col] = infer_data_type(df[col])
+    
+    return render_template('excel/column_mapping.html',
+                         form=form,
+                         filename=os.path.basename(session.get('excel_file', '')),
                          data_type=data_type,
                          columns=columns,
+                         available_fields=available_fields,
+                         suggestions=suggestions,
                          preview_data=preview_data,
-                         suggestions=suggestions)
+                         inferred_types=inferred_types,
+                         total_rows=len(df))
+
+# Legacy mapping route removed - now using universal system
 
 @excel_bp.route('/imported-data')
 @login_required

@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
-from wtforms import StringField, PasswordField, SelectField, IntegerField, TextAreaField, TimeField, HiddenField
+from wtforms import StringField, PasswordField, SelectField, IntegerField, TextAreaField, TimeField, HiddenField, BooleanField
 from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional
 
 class LoginForm(FlaskForm):
@@ -30,9 +30,9 @@ class FacultyForm(FlaskForm):
 class SubjectForm(FlaskForm):
     name = StringField('Subject Name', validators=[DataRequired()])
     code = StringField('Subject Code', validators=[DataRequired()])
-    lecture_hours = IntegerField('Lecture Hours', validators=[DataRequired(), NumberRange(min=0)])
-    tutorial_hours = IntegerField('Tutorial Hours', validators=[DataRequired(), NumberRange(min=0)])
-    practical_hours = IntegerField('Practical Hours', validators=[DataRequired(), NumberRange(min=0)])
+    lecture_hours = IntegerField('Lecture Hours', validators=[Optional(), NumberRange(min=0)], default=0)
+    tutorial_hours = IntegerField('Tutorial Hours', validators=[Optional(), NumberRange(min=0)], default=0)
+    practical_hours = IntegerField('Practical Hours', validators=[Optional(), NumberRange(min=0)], default=0)
     subject_type = SelectField('Type', choices=[('Regular', 'Regular'), ('Elective', 'Elective')], validators=[DataRequired()])
     semester = IntegerField('Semester', validators=[DataRequired(), NumberRange(min=1, max=8)])
     department = StringField('Department', validators=[DataRequired()])
@@ -41,9 +41,9 @@ class SubjectForm(FlaskForm):
 class AssignmentForm(FlaskForm):
     faculty_id = SelectField('Faculty', coerce=int, validators=[DataRequired()])
     subject_id = SelectField('Subject', coerce=int, validators=[DataRequired()])
-    lecture_hours = IntegerField('Lecture Hours', validators=[DataRequired(), NumberRange(min=0)])
-    tutorial_hours = IntegerField('Tutorial Hours', validators=[DataRequired(), NumberRange(min=0)])
-    practical_hours = IntegerField('Practical Hours', validators=[DataRequired(), NumberRange(min=0)])
+    lecture_hours = IntegerField('Lecture Hours', validators=[Optional(), NumberRange(min=0)], default=0)
+    tutorial_hours = IntegerField('Tutorial Hours', validators=[Optional(), NumberRange(min=0)], default=0)
+    practical_hours = IntegerField('Practical Hours', validators=[Optional(), NumberRange(min=0)], default=0)
     division = StringField('Division', validators=[Optional()])
 
 class ExcelUploadForm(FlaskForm):
@@ -52,6 +52,8 @@ class ExcelUploadForm(FlaskForm):
 
 class ColumnMappingForm(FlaskForm):
     mapping_data = HiddenField('Mapping Data')
+    skip_validation = BooleanField('Skip Validation Errors', default=False)
+    create_missing_columns = BooleanField('Create Missing Database Columns', default=True)
 
 class TimetableEntryForm(FlaskForm):
     subject_id = SelectField('Subject', coerce=int, validators=[DataRequired()])

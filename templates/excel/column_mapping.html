@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Column Mapping - College CMS</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Page Content -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{{ url_for('excel.import_data') }}">
+                                <i class="fas fa-file-excel"></i>
+                                Excel Import
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Universal Excel Import - Column Mapping</h1>
+                </div>
+
+                <!-- File Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle"></i> File Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Filename:</strong><br>
+                                <span class="text-muted">{{ filename }}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Data Type:</strong><br>
+                                <span class="badge bg-primary">{{ data_type.title() }}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Total Rows:</strong><br>
+                                <span class="text-success">{{ total_rows }}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Columns Found:</strong><br>
+                                <span class="text-info">{{ columns|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column Mapping Form -->
+                <form method="POST" action="{{ url_for('excel.column_mapping') }}" id="mappingForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Import Options -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cogs"></i> Import Options</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ form.skip_validation(class="form-check-input") }}
+                                        <label class="form-check-label" for="{{ form.skip_validation.id }}">
+                                            {{ form.skip_validation.label.text }}
+                                            <small class="text-muted d-block">Continue import even if some rows fail validation</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ form.create_missing_columns(class="form-check-input") }}
+                                        <label class="form-check-label" for="{{ form.create_missing_columns.id }}">
+                                            {{ form.create_missing_columns.label.text }}
+                                            <small class="text-muted d-block">Automatically add new fields to database</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column Mapping Table -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-columns"></i> Column Mapping</h5>
+                            <small class="text-muted">Map each Excel column to a database field, or skip unwanted columns</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Excel Column</th>
+                                            <th>Sample Data</th>
+                                            <th>Map to Database Field</th>
+                                            <th>Data Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for col in columns %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ col }}</strong>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {% for sample in preview_data[col][:3] %}
+                                                        <div>{{ sample[:50] }}{% if sample|length > 50 %}...{% endif %}</div>
+                                                    {% endfor %}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <select name="mapping_{{ col }}" class="form-select form-select-sm mapping-select" data-column="{{ col }}">
+                                                    <option value="">-- Skip this column --</option>
+                                                    {% for field_key, field_label in available_fields.items() %}
+                                                        <option value="{{ field_key }}" 
+                                                                {% if suggestions.get(col) == field_key %}selected{% endif %}>
+                                                            {{ field_label }}
+                                                        </option>
+                                                    {% endfor %}
+                                                    <option value="custom_{{ col|replace(' ', '_')|lower }}" 
+                                                            class="text-success">
+                                                        ➕ Create new field: {{ col|replace(' ', '_')|lower }}
+                                                    </option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary data-type-badge" data-column="{{ col }}">
+                                                    {{ inferred_types.get(col, 'TEXT') }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Section -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-eye"></i> Import Preview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="preview-content">
+                                <p class="text-muted">Configure column mapping above to see import preview</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('excel.import_data') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Upload
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg" id="importBtn">
+                            <i class="fas fa-download"></i> Start Import
+                        </button>
+                    </div>
+
+                    <!-- Hidden field for mapping data -->
+                    {{ form.mapping_data() }}
+                </form>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mappingSelects = document.querySelectorAll('.mapping-select');
+            const previewContent = document.getElementById('preview-content');
+            const mappingDataField = document.getElementById('mapping_data');
+            const importBtn = document.getElementById('importBtn');
+            
+            function updateMapping() {
+                const mapping = {};
+                let mappedCount = 0;
+                
+                mappingSelects.forEach(select => {
+                    const column = select.dataset.column;
+                    const value = select.value;
+                    if (value) {
+                        mapping[column] = value;
+                        mappedCount++;
+                    }
+                });
+                
+                // Update hidden field
+                mappingDataField.value = JSON.stringify(mapping);
+                
+                // Update preview
+                updatePreview(mapping, mappedCount);
+                
+                // Enable/disable import button
+                importBtn.disabled = mappedCount === 0;
+            }
+            
+            function updatePreview(mapping, mappedCount) {
+                if (mappedCount === 0) {
+                    previewContent.innerHTML = '<p class="text-muted">Configure column mapping above to see import preview</p>';
+                    return;
+                }
+                
+                let html = `
+                    <div class="alert alert-info">
+                        <strong>Ready to Import:</strong> ${mappedCount} columns mapped
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Mapped Fields:</h6>
+                            <ul class="list-group list-group-flush">
+                `;
+                
+                Object.entries(mapping).forEach(([excelCol, dbField]) => {
+                    const isCustom = dbField.startsWith('custom_');
+                    const displayField = isCustom ? dbField.replace('custom_', '') + ' (new)' : dbField;
+                    const badgeClass = isCustom ? 'bg-success' : 'bg-primary';
+                    
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            ${excelCol}
+                            <span class="badge ${badgeClass}">${displayField}</span>
+                        </li>
+                    `;
+                });
+                
+                html += `
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Import Statistics:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-file-excel text-info"></i> Total Rows: {{ total_rows }}</li>
+                                <li><i class="fas fa-columns text-primary"></i> Mapped Columns: ${mappedCount}</li>
+                                <li><i class="fas fa-database text-success"></i> Target: {{ data_type.title() }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                
+                previewContent.innerHTML = html;
+            }
+            
+            // Add event listeners
+            mappingSelects.forEach(select => {
+                select.addEventListener('change', updateMapping);
+            });
+            
+            // Initial update
+            updateMapping();
+            
+            // Form submission
+            document.getElementById('mappingForm').addEventListener('submit', function(e) {
+                const mapping = JSON.parse(mappingDataField.value || '{}');
+                if (Object.keys(mapping).length === 0) {
+                    e.preventDefault();
+                    alert('Please map at least one column before importing.');
+                    return false;
+                }
+                
+                importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+                importBtn.disabled = true;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,10 +1,13 @@
 import pandas as pd
 import json
 import os
+import re
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
 from flask import current_app
 from models import User, Subject, Assignment, ImportedData, ImportedDataRow
 from app import db
+from sqlalchemy import text, inspect
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
@@ -36,8 +39,421 @@ def read_excel_file(filepath):
         current_app.logger.error(f"Error reading file {filepath}: {str(e)}")
         return None
 
+def sanitize_column_name(name):
+    """Convert column name to valid database column name"""
+    # Remove special characters and convert to lowercase
+    sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', str(name).lower())
+    # Remove multiple underscores
+    sanitized = re.sub(r'_+', '_', sanitized)
+    # Remove leading/trailing underscores
+    sanitized = sanitized.strip('_')
+    # Ensure it doesn't start with a number
+    if sanitized and sanitized[0].isdigit():
+        sanitized = 'col_' + sanitized
+    return sanitized or 'unnamed_column'
+
+def get_available_db_fields(data_type):
+    """Get all available database fields for a given data type"""
+    fields = {
+        'faculty': {
+            'username': 'Username',
+            'email': 'Email',
+            'first_name': 'First Name', 
+            'last_name': 'Last Name',
+            'designation': 'Designation',
+            'department': 'Department',
+            'employee_id': 'Employee ID'
+        },
+        'subjects': {
+            'name': 'Subject Name',
+            'code': 'Subject Code',
+            'lecture_hours': 'Lecture Hours',
+            'tutorial_hours': 'Tutorial Hours',
+            'practical_hours': 'Practical Hours',
+            'subject_type': 'Subject Type',
+            'semester': 'Semester',
+            'department': 'Department',
+            'division': 'Division'
+        },
+        'assignments': {
+            'faculty_id': 'Faculty ID',
+            'subject_id': 'Subject ID',
+            'lecture_hours': 'Lecture Hours',
+            'tutorial_hours': 'Tutorial Hours',
+            'practical_hours': 'Practical Hours',
+            'division': 'Division',
+            'academic_year': 'Academic Year'
+        }
+    }
+    return fields.get(data_type, {})
+
 def get_column_suggestions(df, data_type):
-    """Get suggested column mappings based on data type"""
+    """Get suggested column mappings based on data type with smart matching"""
+    columns = df.columns.tolist()
+    available_fields = get_available_db_fields(data_type)
+    
+    suggestions = {}
+    
+    # Smart matching patterns
+    patterns = {
+        'faculty': {
+            'first_name': ['first', 'fname', 'firstname', 'given', 'name'],
+            'last_name': ['last', 'lname', 'lastname', 'surname', 'family'],
+            'email': ['email', 'mail', 'e_mail', 'email_id'],
+            'username': ['username', 'user', 'login', 'id'],
+            'designation': ['designation', 'position', 'rank', 'title', 'post'],
+            'department': ['department', 'dept', 'division', 'branch'],
+            'employee_id': ['employee_id', 'emp_id', 'staff_id', 'id', 'number']
+        },
+        'subjects': {
+            'name': ['name', 'subject_name', 'title', 'subject', 'course'],
+            'code': ['code', 'subject_code', 'course_code', 'id'],
+            'lecture_hours': ['lecture', 'lectures', 'lec_hours', 'theory'],
+            'tutorial_hours': ['tutorial', 'tutorials', 'tut_hours', 'practice'],
+            'practical_hours': ['practical', 'practicals', 'lab', 'lab_hours'],
+            'subject_type': ['type', 'subject_type', 'category'],
+            'semester': ['semester', 'sem', 'level', 'year'],
+            'department': ['department', 'dept', 'branch', 'division'],
+            'division': ['division', 'div', 'section', 'batch']
+        },
+        'assignments': {
+            'faculty_id': ['faculty_id', 'teacher_id', 'instructor_id'],
+            'subject_id': ['subject_id', 'course_id'],
+            'lecture_hours': ['lecture', 'lectures', 'lec_hours', 'theory'],
+            'tutorial_hours': ['tutorial', 'tutorials', 'tut_hours', 'practice'],
+            'practical_hours': ['practical', 'practicals', 'lab', 'lab_hours'],
+            'division': ['division', 'div', 'section', 'batch'],
+            'academic_year': ['academic_year', 'year', 'session']
+        }
+    }
+    
+    # Match columns to database fields
+    for col in columns:
+        col_lower = col.lower().strip()
+        best_match = None
+        best_score = 0
+        
+        pattern_set = patterns.get(data_type, {})
+        for db_field, keywords in pattern_set.items():
+            for keyword in keywords:
+                if keyword in col_lower or col_lower in keyword:
+                    score = len(keyword) if keyword in col_lower else len(col_lower)
+                    if score > best_score:
+                        best_match = db_field
+                        best_score = score
+        
+        suggestions[col] = best_match
+    
+    return suggestions
+
+def infer_data_type(series):
+    """Infer the data type of a pandas series"""
+    # Remove null values for analysis
+    clean_series = series.dropna()
+    if len(clean_series) == 0:
+        return 'TEXT'
+    
+    # Try to convert to numeric
+    try:
+        pd.to_numeric(clean_series)
+        # Check if all values are integers
+        if all(float(x).is_integer() for x in clean_series if pd.notnull(x)):
+            return 'INTEGER'
+        else:
+            return 'REAL'
+    except:
+        pass
+    
+    # Check for boolean values
+    unique_values = set(str(x).lower() for x in clean_series.unique())
+    if unique_values.issubset({'true', 'false', '1', '0', 'yes', 'no'}):
+        return 'BOOLEAN'
+    
+    return 'TEXT'
+
+def create_missing_columns(table_name, columns_to_add):
+    """Dynamically add missing columns to database table"""
+    try:
+        inspector = inspect(db.engine)
+        existing_columns = [col['name'] for col in inspector.get_columns(table_name)]
+        
+        for col_name, col_type in columns_to_add.items():
+            if col_name not in existing_columns:
+                sql_type = {
+                    'TEXT': 'VARCHAR(255)',
+                    'INTEGER': 'INTEGER',
+                    'REAL': 'REAL',
+                    'BOOLEAN': 'BOOLEAN'
+                }.get(col_type, 'VARCHAR(255)')
+                
+                alter_sql = f"ALTER TABLE {table_name} ADD COLUMN {col_name} {sql_type}"
+                db.session.execute(text(alter_sql))
+                current_app.logger.info(f"Added column {col_name} to table {table_name}")
+        
+        db.session.commit()
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error adding columns to {table_name}: {str(e)}")
+        db.session.rollback()
+        return False
+
+def process_imported_data_universal(df, mapping, data_type, filename, skip_validation=False, create_missing_columns=True):
+    """Universal process imported data with dynamic column creation and error tolerance"""
+    # Validate and prepare mapping
+    cleaned_mapping = {}
+    columns_to_create = {}
+    
+    for excel_col, db_field in mapping.items():
+        if db_field and db_field != 'skip' and excel_col in df.columns:
+            # Sanitize database field name
+            clean_field = sanitize_column_name(db_field) if db_field.startswith('custom_') else db_field
+            cleaned_mapping[excel_col] = clean_field
+            
+            # Check if this is a custom field that needs creation
+            if db_field.startswith('custom_'):
+                columns_to_create[clean_field] = infer_data_type(df[excel_col])
+    
+    # Create missing columns if requested
+    if create_missing_columns and columns_to_create:
+        table_name = {'faculty': 'user', 'subjects': 'subject', 'assignments': 'assignment'}.get(data_type)
+        if table_name:
+            create_missing_columns(table_name, columns_to_create)
+    
+    # Create import session
+    import_session = ImportedData(
+        filename=filename,
+        data_type=data_type,
+        total_rows=len(df),
+        successful_rows=0,
+        failed_rows=0,
+        mapping_config=json.dumps(cleaned_mapping)
+    )
+    
+    try:
+        db.session.add(import_session)
+        db.session.commit()
+        
+        successful_rows = 0
+        failed_rows = 0
+        
+        for index, row in df.iterrows():
+            try:
+                # Process row based on data type
+                if data_type == 'faculty':
+                    success = import_faculty_row_universal(row, cleaned_mapping, skip_validation)
+                elif data_type == 'subjects':
+                    success = import_subject_row_universal(row, cleaned_mapping, skip_validation)
+                elif data_type == 'assignments':
+                    success = import_assignment_row_universal(row, cleaned_mapping, skip_validation)
+                else:
+                    success = False
+                
+                if success:
+                    successful_rows += 1
+                    status = 'success'
+                    error_msg = None
+                else:
+                    failed_rows += 1
+                    status = 'failed'
+                    error_msg = 'Import validation failed'
+                
+            except Exception as e:
+                failed_rows += 1
+                status = 'failed'
+                error_msg = str(e)
+                current_app.logger.error(f"Error importing row {index}: {str(e)}")
+                if not skip_validation:
+                    db.session.rollback()
+            
+            # Log row result
+            row_log = ImportedDataRow(
+                import_id=import_session.id,
+                row_data=json.dumps(row.to_dict(), default=str),
+                status=status,
+                error_message=error_msg
+            )
+            db.session.add(row_log)
+        
+        # Update import session statistics
+        import_session.successful_rows = successful_rows
+        import_session.failed_rows = failed_rows
+        db.session.commit()
+        
+        return import_session
+        
+    except Exception as e:
+        current_app.logger.error(f"Error during import: {str(e)}")
+        db.session.rollback()
+        return None
+
+def import_faculty_row_universal(row, mapping, skip_validation=False):
+    """Import faculty row with universal mapping and error tolerance"""
+    try:
+        # Extract mapped values with defaults
+        data = {}
+        for excel_col, db_field in mapping.items():
+            value = row.get(excel_col)
+            if value is not None and str(value).strip():
+                data[db_field] = str(value).strip()
+        
+        # Required fields with fallbacks
+        username = data.get('username') or data.get('email', '').split('@')[0] or f"user_{row.name}"
+        email = data.get('email') or f"{username}@college.edu"
+        
+        # Check if user already exists
+        existing_user = User.query.filter(
+            (User.username == username) | (User.email == email)
+        ).first()
+        
+        if existing_user:
+            if skip_validation:
+                return True  # Skip duplicate
+            else:
+                return False  # Fail on duplicate
+        
+        # Create new faculty user
+        faculty = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash('default123'),
+            first_name=data.get('first_name', 'Unknown'),
+            last_name=data.get('last_name', 'User'),
+            role='faculty',
+            designation=data.get('designation', 'Assistant Prof'),
+            department=data.get('department', 'General'),
+            employee_id=data.get('employee_id')
+        )
+        
+        db.session.add(faculty)
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Error importing faculty: {str(e)}")
+        return False
+
+def import_subject_row_universal(row, mapping, skip_validation=False):
+    """Import subject row with universal mapping and error tolerance"""
+    try:
+        # Extract mapped values
+        data = {}
+        for excel_col, db_field in mapping.items():
+            value = row.get(excel_col)
+            if value is not None:
+                data[db_field] = value
+        
+        # Required fields with defaults
+        name = data.get('name') or f"Subject_{row.name}"
+        code = data.get('code') or f"SUB{row.name:03d}"
+        
+        # Check if subject already exists
+        existing_subject = Subject.query.filter(
+            (Subject.name == name) | (Subject.code == code)
+        ).first()
+        
+        if existing_subject:
+            if skip_validation:
+                return True  # Skip duplicate
+            else:
+                return False  # Fail on duplicate
+        
+        # Create new subject with zero-allowed values
+        subject = Subject(
+            name=name,
+            code=code,
+            lecture_hours=int(data.get('lecture_hours', 0) or 0),
+            tutorial_hours=int(data.get('tutorial_hours', 0) or 0),
+            practical_hours=int(data.get('practical_hours', 0) or 0),
+            subject_type=data.get('subject_type', 'Regular'),
+            semester=int(data.get('semester', 1)),
+            department=data.get('department', 'General'),
+            division=data.get('division')
+        )
+        
+        db.session.add(subject)
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Error importing subject: {str(e)}")
+        return False
+
+def import_assignment_row_universal(row, mapping, skip_validation=False):
+    """Import assignment row with universal mapping and error tolerance"""
+    try:
+        # Extract mapped values
+        data = {}
+        for excel_col, db_field in mapping.items():
+            value = row.get(excel_col)
+            if value is not None:
+                data[db_field] = value
+        
+        # Find faculty and subject by various methods
+        faculty = None
+        subject = None
+        
+        # Find faculty
+        if 'faculty_id' in data:
+            faculty = User.query.filter_by(id=data['faculty_id'], role='faculty').first()
+        elif 'faculty_name' in data or 'faculty_email' in data:
+            faculty_name = data.get('faculty_name', '')
+            faculty_email = data.get('faculty_email', '')
+            faculty = User.query.filter(
+                User.role == 'faculty',
+                (User.first_name.ilike(f"%{faculty_name}%") | 
+                 User.last_name.ilike(f"%{faculty_name}%") |
+                 User.email == faculty_email)
+            ).first()
+        
+        # Find subject
+        if 'subject_id' in data:
+            subject = Subject.query.filter_by(id=data['subject_id']).first()
+        elif 'subject_name' in data or 'subject_code' in data:
+            subject_name = data.get('subject_name', '')
+            subject_code = data.get('subject_code', '')
+            subject = Subject.query.filter(
+                (Subject.name.ilike(f"%{subject_name}%") |
+                 Subject.code == subject_code)
+            ).first()
+        
+        if not faculty or not subject:
+            if skip_validation:
+                return True  # Skip if references not found
+            else:
+                return False
+        
+        # Check for existing assignment
+        existing_assignment = Assignment.query.filter_by(
+            faculty_id=faculty.id,
+            subject_id=subject.id
+        ).first()
+        
+        if existing_assignment:
+            if skip_validation:
+                return True  # Skip duplicate
+            else:
+                return False
+        
+        # Create new assignment with zero-allowed values
+        assignment = Assignment(
+            faculty_id=faculty.id,
+            subject_id=subject.id,
+            lecture_hours=int(data.get('lecture_hours', 0) or 0),
+            tutorial_hours=int(data.get('tutorial_hours', 0) or 0),
+            practical_hours=int(data.get('practical_hours', 0) or 0),
+            division=data.get('division'),
+            academic_year=data.get('academic_year', '2024-25')
+        )
+        
+        db.session.add(assignment)
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Error importing assignment: {str(e)}")
+        return False
+
+# Legacy functions - keeping for backward compatibility but removing duplicate process_imported_data
+
+def old_get_column_suggestions_backup(df, data_type):
+    """Backup of original function"""
     columns = df.columns.tolist()
     
     mappings = {

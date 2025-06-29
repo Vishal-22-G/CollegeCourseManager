@@ -1,0 +1,114 @@
+🧠 Goal: Remove Excel template dependency and build a dynamic, error-tolerant, preview-first import engine that maps any Excel file to your subject/faculty/task database.
+
+✅ NEW FEATURE: UNIVERSAL EXCEL IMPORT
+Upload Any Excel File (CSV/XLS/XLSX)
+
+Accept any format, any structure (headers must exist)
+
+Remove any strict file structure/template checks
+
+Smart Header Preview & Mapping (UI Page)
+
+Display the uploaded Excel columns
+
+For each column, show dropdown to select:
+
+Matching DB field (e.g., Subject Name, Lecture Hours, etc.)
+
+Or option to create new column in DB
+
+Show first 5–10 rows as live preview after mapping
+
+Dynamic Schema Handling
+
+If mapped field doesn’t exist in DB, automatically:
+
+Add new column with correct data type
+
+Create migration or alter table if needed
+
+Clean Data Handling
+
+Accept values like 0 (zero) for lecture, practical, or tutorial hours
+
+Avoid any validation enforcing minimum 1 hour (allow 0)
+
+Remove strict validation blocks for non-null numeric fields
+
+Accept all valid data types: string, float, int
+
+🛠 BACKEND LOGIC
+Scan Excel headers → generate field map
+
+Provide UI for user to:
+
+Map Excel column to DB column
+
+Skip column or add as new
+
+Store mapping template (optional) for faster re-import
+
+Parse and store data with:
+
+Field-level validation (but allow empty/zero values)
+
+DataType auto detection: string, int, float
+
+Add missing columns to DB using migrations or SQL ALTER TABLE
+
+⚙️ DATABASE BEHAVIOR UPGRADE
+Set Lecture Hours, Tutorial Hours, Practical Hours to allow 0 (remove min=1)
+
+Allow optional fields like Description, Remarks, etc. to be nullable
+
+Add ability to dynamically create DB columns with:
+
+Column name from Excel
+
+Inferred type from sample rows
+
+Safe SQL naming (auto-sanitize headers like "Subject Name" → subject_name)
+
+📄 UI IMPROVEMENTS FOR IMPORT PAGE
+Header preview of uploaded Excel
+
+Row preview (first 5–10 rows)
+
+Mapping dropdown for each Excel column
+
+Dropdown values = all fields in subject/task/faculty DB
+
+Option to “Create New DB Field”
+
+Validation box showing:
+
+Which fields will be imported
+
+Which new fields will be added
+
+Any mismatched or empty fields
+
+🧪 DEBUG + ERROR FIXES (BUG SCAN)
+✅ Fix: Lecture/Tutorial/Practical field error on value 0
+✅ Fix: Template mapping hardcoded — remove template-only logic
+✅ Fix: Columns mismatch → log errors but continue import
+✅ Fix: Table crashes when column is missing in DB → add column dynamically
+✅ Fix: UI not showing imported data → force re-render after successful import
+
+🧠 OPTIONAL FUTURE FEATURES
+Allow admins to save field mapping templates for reuse
+
+Import nested sheets (multi-semester, multi-division files)
+
+Import faculty-subject relationship via Excel
+
+Support .zip file upload with multiple Excel sheets
+
+✅ SUMMARY OF IMPACT
+Before	After (Post Upgrade)
+Excel format had to match	Accepts any Excel format or column structure
+Columns had to match DB	Dynamic column mapping + automatic DB field creation
+0 hours caused error	Accepts 0 values in all fields
+Hard to debug import errors	Clear UI + preview of mapped fields and values
+Only works with templates	Template-free, flexible import
+Data sometimes not shown	Fixes preview/render bugs and post-import visibility
