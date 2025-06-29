@@ -195,12 +195,21 @@
             // Form submission
             uploadForm.addEventListener('submit', function(e) {
                 const file = fileInput.files[0];
+                const dataType = document.querySelector('select[name="data_type"]').value;
+                
                 if (!file) {
                     e.preventDefault();
                     alert('Please select a file to upload');
                     return;
                 }
                 
+                if (!dataType) {
+                    e.preventDefault();
+                    alert('Please select a data type');
+                    return;
+                }
+                
+                console.log('Submitting form with file:', file.name, 'type:', dataType);
                 uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
                 uploadBtn.disabled = true;
             });

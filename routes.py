@@ -470,26 +470,51 @@ def import_data():
         file = form.file.data
         data_type = form.data_type.data
         
+        print(f"Processing file upload: {file.filename}, type: {data_type}")
+        
         # Save uploaded file
         filepath = save_uploaded_file(file)
         if not filepath:
-            flash('Error saving file', 'danger')
+            flash('Error saving file. Please check file format and try again.', 'danger')
             return redirect(url_for('excel.import_data'))
         
-        # Read Excel file
-        df = read_excel_file(filepath)
-        if df is None:
-            flash('Error reading Excel file', 'danger')
+        print(f"File saved to: {filepath}")
+        
+        try:
+            # Read Excel file
+            df = read_excel_file(filepath)
+            if df is None or df.empty:
+                flash('Error reading Excel file or file is empty', 'danger')
+                return redirect(url_for('excel.import_data'))
+            
+            print(f"Excel file read successfully: {len(df)} rows, {len(df.columns)} columns")
+            
+            # Get column suggestions
+            columns = df.columns.tolist()
+            suggestions = get_column_suggestions(df, data_type)
+            
+            # Store file info in session for mapping
+            from flask import session
+            session['excel_file'] = filepath
+            session['data_type'] = data_type
+            session['columns'] = columns
+            session['suggestions'] = suggestions
+            session['preview_data'] = df.head(10).to_dict('records')
+            session['filename'] = file.filename
+            
+            flash(f'File uploaded successfully! Found {len(df)} rows with {len(df.columns)} columns.', 'success')
+            return redirect(url_for('excel.column_mapping'))
+            
+        except Exception as e:
+            print(f"Error processing file: {str(e)}")
+            flash(f'Error processing file: {str(e)}', 'danger')
             return redirect(url_for('excel.import_data'))
-        
-        # Store file info in session for mapping
-        from flask import session
-        session['excel_file'] = filepath
-        session['data_type'] = data_type
-        session['columns'] = df.columns.tolist()
-        session['preview_data'] = df.head(10).to_dict('records')
-        
-        return redirect(url_for('excel.column_mapping'))
+    
+    # Show form validation errors
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'{field}: {error}', 'danger')
     
     return render_template('excel/import.html', form=form)
 
